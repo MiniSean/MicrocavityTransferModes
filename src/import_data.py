@@ -2,7 +2,7 @@ import os
 import numpy as np
 # import logging
 from typing import Tuple, Optional
-DATA_DIR = '../data/Trans'
+DATA_DIR = 'data/Trans'
 
 
 # Synchronized measurement data
