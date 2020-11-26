@@ -1,20 +1,18 @@
-import os
-import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from typing import Tuple
-DATA_DIR = '../data/Trans'
+from src.import_data import import_npy, slice_array, SyncMeasData
 
 
-def import_npy(filename: str) -> np.ndarray:
-    filepath = os.path.join(DATA_DIR, filename + '.npy')
-    return np.load(file=filepath, allow_pickle=False)
-
-
-def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
-    min_index = min(slice)
-    max_index = max(slice)
-    return array[min_index: max_index]
+def plot_class(axis: plt.axes, measurement_class: SyncMeasData):
+    # Plot array
+    axis.plot(measurement_class.x_data, measurement_class.y_data)
+    # Set axis
+    axis.set_xlabel('Sampling Voltage [V]')
+    axis.set_ylabel('Transmission [a.u.]')
+    axis.set_yscale('log')
+    axis.grid(True)
+    return axis
 
 
 def plot_npy(axis: plt.axes, measurement_file: str, sample_file: str, slice: Tuple[int, int] = None) -> plt.axes:
@@ -48,10 +46,16 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     # Optional, define slice
     slice = (1050000, 1150000)
+    # Construct measurement class
+    measurement_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)
+
     # Apply axis draw/modification
-    ax = plot_npy(axis=ax, measurement_file=file_meas, sample_file=file_samp, slice=None)
+    # ax = plot_npy(axis=ax, measurement_file=file_meas, sample_file=file_samp, slice=None)
+    ax = plot_class(axis=ax, measurement_class=measurement_class)
 
     fig2, ax2 = plt.subplots()
-    ax2 = plot_npy(axis=ax2, measurement_file=file_meas, sample_file=file_samp, slice=slice)
+    measurement_class.slicer = slice
+    # ax2 = plot_npy(axis=ax2, measurement_file=file_meas, sample_file=file_samp, slice=slice)
+    ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
     # Show figure plot
     plt.show()
