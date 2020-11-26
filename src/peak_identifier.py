@@ -16,7 +16,7 @@ def identify_peaks(meas_data: np.ndarray) -> Tuple[np.ndarray, Dict]:  # -> List
 def identify_noise_ceiling(meas_data: np.ndarray) -> float:
     mean = np.mean(meas_data)
     std = np.std(meas_data)
-    return mean + .1 * std
+    return mean + .1 * std  #TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
 
 
 def identify_peak_prominence(meas_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
