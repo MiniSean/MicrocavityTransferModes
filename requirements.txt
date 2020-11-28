@@ -1,3 +1,4 @@
+scipy
 # Basic requirements
 # Math
 numpy
