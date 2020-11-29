@@ -6,7 +6,7 @@ from src.import_data import SyncMeasData
 
 class PeakData(float):
 
-    def __new__(cls, data: SyncMeasData, index: int):
+    def __new__(cls, data: SyncMeasData, index: int, *args, **kwargs):
         value = data.y_data[index]
         return float.__new__(cls, value)
 
