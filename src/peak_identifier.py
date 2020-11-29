@@ -45,23 +45,6 @@ class PeakCollection:
     def index(self, *args, **kwargs):
         return self._list.index(*args, **kwargs)
 
-    def get_clusters(self) -> List[List[PeakData]]:
-        """Separates data points into clusters based on their mutual distance."""
-        cluster_data = [peak.get_x for peak in self._list]
-        # Calculate mutual peak distances
-        distances = [cluster_data[i+1] - cluster_data[i] for i in range(len(cluster_data) - 1)]
-        mean = np.mean(distances)
-        std = np.std(distances)
-        # Detect statistical outliers
-        outliers = [i for i, distance in enumerate(distances) if abs(distance) > mean + 2 * std]
-        # Construct cluster splitting
-        split_indices = (0,) + tuple(data+1 for data in outliers) + (len(cluster_data)+1,)
-        return [self._list[start: end] for start, end in zip(split_indices, split_indices[1:])]
-
-    def get_cluster_averages(self) -> List[float]:
-        """Averages data point x-location in each cluster."""
-        return [sum([peak.get_x for peak in peak_cluster]) / max(1, len(peak_cluster)) for peak_cluster in self.get_clusters()]
-
 
 def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
     mean_prominence = np.mean(identify_peak_prominence(meas_data)[0])  # Average peak prominence
