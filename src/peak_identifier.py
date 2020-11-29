@@ -64,21 +64,21 @@ class PeakCollection:
 
 
 def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
-    mean_prominence = np.mean(identify_peak_prominence(meas_data.y_data)[0])  # Average peak prominence
-    peak_indices, properties = find_peaks(x=meas_data.y_data, height=identify_noise_ceiling(meas_data.y_data), prominence=mean_prominence, distance=10)  # Arbitrary distance value
+    mean_prominence = np.mean(identify_peak_prominence(meas_data)[0])  # Average peak prominence
+    peak_indices, properties = find_peaks(x=meas_data.y_data, height=identify_noise_ceiling(meas_data), prominence=mean_prominence, distance=10)  # Arbitrary distance value
     peak_collection = PeakCollection([PeakData(data=meas_data, index=i) for i in peak_indices])
     return peak_collection
 
 
-def identify_noise_ceiling(meas_data: np.ndarray) -> float:
-    mean = np.mean(meas_data)
-    std = np.std(meas_data)
-    return mean + .09 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
+def identify_noise_ceiling(meas_data: SyncMeasData) -> float:
+    mean = np.mean(meas_data.data_array[0])
+    std = np.std(meas_data.data_array[0])
+    return mean + .21 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
 
 
-def identify_peak_prominence(meas_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    all_peaks_above_noise = find_peaks(x=meas_data, height=identify_noise_ceiling(meas_data))[0]
-    return peak_prominences(x=meas_data, peaks=all_peaks_above_noise)
+def identify_peak_prominence(meas_data: SyncMeasData) -> Tuple[np.ndarray, np.ndarray]:
+    all_peaks_above_noise = find_peaks(x=meas_data.y_data, height=identify_noise_ceiling(meas_data))[0]
+    return peak_prominences(x=meas_data.y_data, peaks=all_peaks_above_noise)
 
 
 if __name__ == '__main__':
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     measurement_class.slicer = slice  # Zooms in on relevant data part
 
     # Collect noise ground level
-    noise_ceiling = identify_noise_ceiling(measurement_class.y_data)
+    noise_ceiling = identify_noise_ceiling(measurement_class)
     # Collect peaks
     peak_collection = identify_peaks(measurement_class)
 
