@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Union
+from typing import List, Union, Tuple
 from src.import_data import SyncMeasData
 from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 
@@ -71,8 +71,10 @@ class LabeledPeakCollection(PeakCollection):
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
         for cluster in mode_clusters:
-            if len(ordered_clusters) == 0 or cluster.get_avg_y > .5:  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
+            if cluster.get_avg_y > .5:  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
                 ordered_clusters.append([cluster])
+            elif len(ordered_clusters) == 0:
+                continue  # Skip junk peaks before first fundamental mode
             else:
                 ordered_clusters[-1].append(cluster)
         # Iterate and label
@@ -82,17 +84,39 @@ class LabeledPeakCollection(PeakCollection):
                 result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id, trans_mode=trans_mode_id))
         return result  # [peak_data for peak_data in optical_mode_collection]
 
-    def get_labeled_peaks(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeak]:
+    def get_labeled_clusters(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeakCluster]:
         result = []
 
-        def filter_func(peak: LabeledPeak):  # Filter function
-            return (True if long_mode is None else peak.get_longitudinal_mode_id == long_mode) and \
-                   (True if trans_mode is None else peak.get_transverse_mode_id == trans_mode)
+        def filter_func(cluster: LabeledPeakCluster):  # Filter function
+            return (True if long_mode is None else cluster.get_longitudinal_mode_id == long_mode) and \
+                   (True if trans_mode is None else cluster.get_transverse_mode_id == trans_mode)
 
-        for labeled_peak in self._list:
-            if filter_func(peak=labeled_peak):
+        for labeled_peak in self._mode_clusters:
+            if filter_func(cluster=labeled_peak):
                 result.append(labeled_peak)
         return result
+
+    def get_labeled_peaks(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeak]:
+        """The referred labeled clusters contain labeled peaks by definition"""
+        return flatten_clusters(data=self.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode))
+
+    def get_mode_sequence(self, long_mode: Union[int, None]) -> Tuple[List[LabeledPeakCluster], Tuple[float, float]]:
+        """
+        Determines the slice bounds in which the requested longitudinal mode exists compared to its successor.
+        :param long_mode: Requested longitudinal mode number
+        :return: Tuple( All clusters corresponding to longitudinal mode, slice boundary in arbitrary cavity space units)
+        """
+        # Create sequence slice
+        cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
+        next_mode = self.get_labeled_clusters(long_mode=long_mode + 1, trans_mode=None)
+
+        def estimate_q(sequence: List[LabeledPeakCluster]) -> float:
+            if len(sequence) < 2:
+                raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
+            distances = [sequence[i+1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
+            return sequence[0].get_avg_x - np.mean(distances)
+        slice = (estimate_q(cluster_array), estimate_q(next_mode))
+        return cluster_array, slice
 
     @staticmethod
     def _get_clusters(peak_list: Union[List[PeakData], PeakCollection]) -> List[PeakCluster]:
@@ -137,6 +161,19 @@ def flatten_clusters(data: List[PeakCluster]) -> List[PeakData]:
         for peak in cluster:
             result.append(peak)
     return result
+
+
+def get_slice(data_class: SyncMeasData, value_slice: Tuple[float, float]) -> Tuple[int, int]:
+    """Transforms arbitrary value slice into index specific slice"""
+
+    def find_nearest(array: np.ndarray, value: float) -> int: # Assumes data is sorted
+        index = np.searchsorted(array, value, side="left")
+        if index > 0 and (index == len(array) or abs(value - array[index-1]) < abs(value - array[index])):
+            return index-1
+        else:
+            return index
+
+    return find_nearest(array=data_class.x_data, value=value_slice[0]), find_nearest(array=data_class.x_data, value=value_slice[1])
 
 
 if __name__ == '__main__':
