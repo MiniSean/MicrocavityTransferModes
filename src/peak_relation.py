@@ -185,8 +185,8 @@ if __name__ == '__main__':
     ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration1')
     # Optional, define slice
     # slice = (1050000, 1150000)
-    measurement_class.slicer = slice  # Zooms in on relevant data part
-    measurement_class2.slicer = slice
+    # measurement_class.slicer = slice  # Zooms in on relevant data part
+    # measurement_class2.slicer = slice
 
     # Collect peaks
     peak_collection_itt0 = LabeledPeakCollection(identify_peaks(measurement_class))
@@ -195,26 +195,36 @@ if __name__ == '__main__':
     offset_info = get_cluster_offset(peak_collection_itt0, peak_collection_itt1)
 
     # Plot measurement
-    # ax = plot_class(axis=ax, measurement_class=measurement_class)
-    ax2 = plot_class(axis=ax2, measurement_class=measurement_class2)
+    ax = plot_class(axis=ax, measurement_class=measurement_class)
+    # ax2 = plot_class(axis=ax2, measurement_class=measurement_class2)
 
     # Plot peak collection
-    ax = plot_peak_collection(axis=ax, data=peak_collection_itt0)
-    ax2 = plot_specific_peaks(axis=ax2, data=peak_collection_itt1, long_mode=None, trans_mode=0)  # Only fundamental modes
-    ax2 = plot_specific_peaks(axis=ax2, data=peak_collection_itt1, long_mode=None, trans_mode=1)  # Only fundamental modes
-    ax2 = plot_specific_peaks(axis=ax2, data=peak_collection_itt1, long_mode=None, trans_mode=2)  # Only fundamental modes
+    # ax = plot_peak_collection(axis=ax, data=peak_collection_itt0)  # All peaks
 
-    for i, cluster_mean_x in enumerate(peak_collection_itt0.get_clusters_avg_x):
-        ax.axvline(x=cluster_mean_x, color='r', alpha=1)
-    # for i, cluster_mean in enumerate(peak_collection_itt1.get_clusters_avg_x):
-    #     ax.axvline(x=cluster_mean, color='g', alpha=1)
+    cluster_array, value_slice = peak_collection_itt0.get_mode_sequence(long_mode=0)
+    data_slice = get_slice(measurement_class, value_slice)
 
-    # # Temp color cycler
-    # color_cycle = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
-    #                '#7f7f7f']  # , '#bcbd22', '#17becf']
-    # for i, cluster_mean_y in enumerate(peak_collection_itt0.get_clusters_avg_y):
-    #     print(cluster_mean_y)
-    #     ax.axhline(y=cluster_mean_y, color=color_cycle[i % len(color_cycle)], alpha=1, label=f'Cluster {i}')
+    # Update before slice
+    peak_array = []
+    for peak in flatten_clusters(data=cluster_array):
+        if peak.update_index() is not None:
+            peak_array.append(peak)
+
+    ax = plot_peak_collection(axis=ax, data=peak_array)
+
+    ax.axvline(x=value_slice[0], color='r', alpha=1)
+    ax.axvline(x=value_slice[1], color='g', alpha=1)
+
+    measurement_class.slicer = data_slice
+
+    # Update after slice
+    for peak in peak_array:
+        if peak.update_index() is not None:
+            print('Peak Left over')
+            peak_array.append(peak)
+
+    ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
+    ax2 = plot_peak_collection(axis=ax2, data=peak_array)
 
     # Show
     ax2.legend()
