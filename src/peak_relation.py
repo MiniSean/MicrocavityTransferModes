@@ -45,12 +45,27 @@ class PeakCluster:
         return np.mean([peak.get_y for peak in self._list])
 
 
+class LabeledPeakCluster(PeakCluster):
+    def __init__(self, data: List[PeakData], long_mode: int, trans_mode: int):
+        super().__init__([LabeledPeak(data=peak._data, index=peak._index_pointer, long_mode=long_mode, trans_mode=trans_mode) for peak in data])
+        self._long_mode = long_mode
+        self._trans_mode = trans_mode
+
+    @property
+    def get_longitudinal_mode_id(self) -> int:
+        return self._long_mode
+
+    @property
+    def get_transverse_mode_id(self) -> int:
+        return self._trans_mode
+
+
 class LabeledPeakCollection(PeakCollection):
     def __init__(self, optical_mode_collection: PeakCollection):
-        super().__init__(self._set_labeled_peaks(optical_mode_collection))
-        self._mode_clusters = self._get_clusters(self._list)  # Single calculation for performance
+        self._mode_clusters = self._set_labeled_peaks(optical_mode_collection)  # Single calculation for performance
+        super().__init__(flatten_clusters(data=self._mode_clusters))
 
-    def _set_labeled_peaks(self, optical_mode_collection: PeakCollection) -> List[LabeledPeak]:
+    def _set_labeled_peaks(self, optical_mode_collection: PeakCollection) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
         mode_clusters = sorted(mode_clusters, key=lambda x: -x.get_avg_x)  # Sort clusters from small to large cavity
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
@@ -64,9 +79,7 @@ class LabeledPeakCollection(PeakCollection):
         result = []
         for long_mode_id, cluster_array in enumerate(ordered_clusters):
             for trans_mode_id, cluster in enumerate(cluster_array):
-                for peak in cluster:
-                    result.append(LabeledPeak(data=peak._data, index=peak._index_pointer, long_mode=long_mode_id,
-                                              trans_mode=trans_mode_id))
+                result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id, trans_mode=trans_mode_id))
         return result  # [peak_data for peak_data in optical_mode_collection]
 
     def get_labeled_peaks(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeak]:
@@ -97,7 +110,7 @@ class LabeledPeakCollection(PeakCollection):
         return [PeakCluster(peak_list[start: end]) for start, end in zip(split_indices, split_indices[1:])]
 
     @property
-    def get_clusters(self) -> List[PeakCluster]:
+    def get_clusters(self) -> List[LabeledPeakCluster]:
         """Returns a list of pre-calculated mode clusters"""
         return self._mode_clusters
 
@@ -116,6 +129,14 @@ def get_cluster_offset(base_observer: LabeledPeakCollection, target_observer: La
     cluster_mean_base = base_observer.get_clusters_avg_x
     cluster_mean_target = target_observer.get_clusters_avg_x
     return np.mean([base - target for base, target in zip(cluster_mean_base, cluster_mean_target)])
+
+
+def flatten_clusters(data: List[PeakCluster]) -> List[PeakData]:
+    result = []
+    for cluster in data:
+        for peak in cluster:
+            result.append(peak)
+    return result
 
 
 if __name__ == '__main__':
@@ -137,7 +158,7 @@ if __name__ == '__main__':
     offset_info = get_cluster_offset(peak_collection_itt0, peak_collection_itt1)
 
     # Plot measurement
-    ax = plot_class(axis=ax, measurement_class=measurement_class)
+    # ax = plot_class(axis=ax, measurement_class=measurement_class)
     ax2 = plot_class(axis=ax2, measurement_class=measurement_class2)
 
     # Plot peak collection
