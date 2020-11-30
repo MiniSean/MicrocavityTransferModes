@@ -16,6 +16,16 @@ class PeakData(float):
         self._index_pointer = index
         super(float).__init__()
 
+    def update_index(self) -> Union['PeakData', None]:
+        """
+        Updates internal reference index based on new slice.
+        If updated index falls outside slice domain, return None, else return self.
+        """
+        if self._data.slicer is None:
+            return self
+        self._index_pointer -= self._data.slicer[0]
+        return self if self._data.inside_slice_range(self._index_pointer) else None
+
     @property
     def get_x(self):
         return self._data.x_data[self._index_pointer]
