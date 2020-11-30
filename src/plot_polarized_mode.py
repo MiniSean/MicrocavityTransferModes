@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import logging
 from src.plot_npy import get_standard_axis, plot_class, plot_peak_collection
 from src.import_data import SyncMeasData
 from src.peak_relation import LabeledPeakCollection, get_slice, flatten_clusters
@@ -6,7 +7,12 @@ from src.peak_relation import LabeledPeakCollection, get_slice, flatten_clusters
 
 def plot_isolated_long_mode(axis: plt.axes, data_class: SyncMeasData, collection: LabeledPeakCollection, long_mode: int) -> plt.axis:
     # Plot array
-    cluster_array, value_slice = collection.get_mode_sequence(long_mode=long_mode)
+    try:
+        cluster_array, value_slice = collection.get_mode_sequence(long_mode=long_mode)
+    except ValueError:
+        logging.warning(f'Longitudinal mode {long_mode} not well defined')
+        return axis
+
     data_slice = get_slice(data_class=data_class, value_slice=value_slice)
     # Update measurement data indices (slice)
     data_class.slicer = data_slice
@@ -36,8 +42,11 @@ if __name__ == '__main__':
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
     labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
 
+
+
     # Test
-    fig, ax = plt.subplots()
     index = 0
-    plot_isolated_long_mode(axis=ax, data_class=meas_iterations[index], collection=labeled_peaks[index], long_mode=0)
+    for long_mode in range(3):
+        fig, ax = plt.subplots()
+        plot_isolated_long_mode(axis=ax, data_class=meas_iterations[index], collection=labeled_peaks[index], long_mode=long_mode)
     plt.show()

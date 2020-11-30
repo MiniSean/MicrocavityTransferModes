@@ -115,6 +115,7 @@ class LabeledPeakCollection(PeakCollection):
                 raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
             distances = [sequence[i+1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
             return sequence[0].get_avg_x - np.mean(distances)
+
         slice = (estimate_q(cluster_array), estimate_q(next_mode))
         return cluster_array, slice
 
