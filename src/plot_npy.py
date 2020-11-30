@@ -3,7 +3,7 @@ from matplotlib import rcParams
 from typing import Tuple, Union, List
 from src.import_data import import_npy, slice_array, SyncMeasData
 from src.peak_identifier import PeakCollection, PeakData
-from src.peak_relation import LabeledPeakCollection
+from src.peak_relation import LabeledPeakCollection, LabeledPeakCluster
 
 
 def plot_class(axis: plt.axes, measurement_class: SyncMeasData):
@@ -37,12 +37,18 @@ def plot_npy(axis: plt.axes, measurement_file: str, sample_file: str, slice: Tup
     return get_standard_axis(axis=axis)
 
 
-def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollection]) -> plt.axes:
+def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollection], label: str = '') -> plt.axes:
     # Plot peaks
     x = [peak.get_x for peak in data]
     y = [peak.get_y for peak in data]
-    axis.plot(x, y, 'o')
+    axis.plot(x, y, 'o', label=label)
     return get_standard_axis(axis=axis)
+
+
+def plot_cluster_collection(axis: plt.axes, data: Union[List[LabeledPeakCollection], LabeledPeakCollection]) -> plt.axes:
+    for cluster in (data.get_clusters if isinstance(data, LabeledPeakCollection) else data):
+        axis = plot_peak_collection(axis=axis, data=cluster, label=f'n+m={cluster.get_transverse_mode_id}')
+    return axis
 
 
 def plot_specific_peaks(axis: plt.axes, data: LabeledPeakCollection, long_mode: Union[int, None], trans_mode: Union[int, None]) -> plt.axes:
