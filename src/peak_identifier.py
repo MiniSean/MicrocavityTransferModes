@@ -1,14 +1,14 @@
 import numpy as np
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 from scipy.signal import find_peaks, peak_prominences
 from src.import_data import SyncMeasData
 
 
-class PeakData(float):
+class PeakData:  # (float):
 
-    def __new__(cls, data: SyncMeasData, index: int, *args, **kwargs):
-        value = data.y_data[index]
-        return float.__new__(cls, value)
+    # def __new__(cls, data: SyncMeasData, index: int, *args, **kwargs):
+    #     value = data.y_data[index]
+    #     return float.__new__(cls, value)
 
     def __init__(self, data: SyncMeasData, index: int):
         # (self, loc: float, height: float)
