@@ -116,8 +116,10 @@ class LabeledPeakCollection(PeakCollection):
             distances = [sequence[i+1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
             return sequence[0].get_avg_x - np.mean(distances)
 
-        slice = (estimate_q(cluster_array), estimate_q(next_mode))
-        return cluster_array, slice
+        value_slice = (estimate_q(cluster_array), estimate_q(next_mode))
+        if value_slice[0] > value_slice[1]:  # Swap slice order to maintain (low, high) bound structure
+            value_slice = (value_slice[1], value_slice[0])
+        return cluster_array, value_slice
 
     @staticmethod
     def _get_clusters(peak_list: Union[List[PeakData], PeakCollection]) -> List[PeakCluster]:
@@ -205,27 +207,14 @@ if __name__ == '__main__':
     cluster_array, value_slice = peak_collection_itt0.get_mode_sequence(long_mode=0)
     data_slice = get_slice(measurement_class, value_slice)
 
-    # Update before slice
-    peak_array = []
-    for peak in flatten_clusters(data=cluster_array):
-        if peak.update_index() is not None:
-            peak_array.append(peak)
-
-    ax = plot_peak_collection(axis=ax, data=peak_array)
+    ax = plot_peak_collection(axis=ax, data=flatten_clusters(data=cluster_array))
 
     ax.axvline(x=value_slice[0], color='r', alpha=1)
     ax.axvline(x=value_slice[1], color='g', alpha=1)
 
-    measurement_class.slicer = data_slice
-
-    # Update after slice
-    for peak in peak_array:
-        if peak.update_index() is not None:
-            print('Peak Left over')
-            peak_array.append(peak)
-
+    ax2.set_xlim(value_slice)
     ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
-    ax2 = plot_peak_collection(axis=ax2, data=peak_array)
+    ax2 = plot_peak_collection(axis=ax2, data=flatten_clusters(data=cluster_array))
 
     # Show
     ax2.legend()
