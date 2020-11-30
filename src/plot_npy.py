@@ -3,7 +3,7 @@ from matplotlib import rcParams
 from typing import Tuple, Union, List
 from src.import_data import import_npy, slice_array, SyncMeasData
 from src.peak_identifier import PeakCollection, PeakData
-from src.peak_relation import LabeledPeakCollection, LabeledPeakCluster
+from src.peak_relation import LabeledPeakCollection, LabeledPeak, LabeledPeakCluster
 
 
 def plot_class(axis: plt.axes, measurement_class: SyncMeasData):
@@ -45,7 +45,7 @@ def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollect
     return get_standard_axis(axis=axis)
 
 
-def plot_cluster_collection(axis: plt.axes, data: Union[List[LabeledPeakCollection], LabeledPeakCollection]) -> plt.axes:
+def plot_cluster_collection(axis: plt.axes, data: Union[List[LabeledPeakCluster], LabeledPeakCollection]) -> plt.axes:
     for cluster in (data.get_clusters if isinstance(data, LabeledPeakCollection) else data):
         axis = plot_peak_collection(axis=axis, data=cluster, label=f'n+m={cluster.get_transverse_mode_id}')
     return axis
