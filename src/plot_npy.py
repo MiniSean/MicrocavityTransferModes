@@ -1,20 +1,15 @@
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-from typing import Tuple, Union
+from typing import Tuple, Union, List
 from src.import_data import import_npy, slice_array, SyncMeasData
-from src.peak_identifier import PeakCollection
+from src.peak_identifier import PeakCollection, PeakData
 from src.peak_relation import LabeledPeakCollection
 
 
 def plot_class(axis: plt.axes, measurement_class: SyncMeasData):
     # Plot array
     axis.plot(measurement_class.x_data, measurement_class.y_data)
-    # Set axis
-    axis.set_xlabel('Sampling Voltage [V]')
-    axis.set_ylabel('Transmission [a.u.]')
-    axis.set_yscale('log')
-    axis.grid(True)
-    return axis
+    return get_standard_axis(axis=axis)
 
 
 def get_standard_axis(axis: plt.axes) -> plt.axes:
@@ -42,7 +37,7 @@ def plot_npy(axis: plt.axes, measurement_file: str, sample_file: str, slice: Tup
     return get_standard_axis(axis=axis)
 
 
-def plot_peak_collection(axis: plt.axes, data: PeakCollection) -> plt.axes:
+def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollection]) -> plt.axes:
     # Plot peaks
     x = [peak.get_x for peak in data]
     y = [peak.get_y for peak in data]
