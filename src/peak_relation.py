@@ -35,14 +35,20 @@ class PeakCluster:
         return self._list.__getitem__(item)
 
     @property
-    def get_avg_x(self):
+    def get_avg_x(self) -> float:
         """Returns average data point x-location in cluster."""
         return np.mean([peak.get_x for peak in self._list])
 
     @property
-    def get_avg_y(self):
+    def get_avg_y(self) -> float:
         """Returns average data point y-location in cluster."""
         return np.mean([peak.get_y for peak in self._list])
+
+    @property
+    def get_value_slice(self) -> Tuple[float, float]:
+        """Returns standard deviation data point x-location in cluster."""
+        margin = .005
+        return min([peak.get_x for peak in self._list]) - margin, max([peak.get_x for peak in self._list]) + margin  # np.std([peak.get_x for peak in self._list])
 
 
 class LabeledPeakCluster(PeakCluster):
@@ -87,7 +93,7 @@ class LabeledPeakCollection(PeakCollection):
     def get_labeled_clusters(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeakCluster]:
         result = []
 
-        def filter_func(cluster: LabeledPeakCluster):  # Filter function
+        def filter_func(cluster: LabeledPeakCluster):  # Filter function for specific mode label
             return (True if long_mode is None else cluster.get_longitudinal_mode_id == long_mode) and \
                    (True if trans_mode is None else cluster.get_transverse_mode_id == trans_mode)
 
@@ -100,26 +106,30 @@ class LabeledPeakCollection(PeakCollection):
         """The referred labeled clusters contain labeled peaks by definition"""
         return flatten_clusters(data=self.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode))
 
-    def get_mode_sequence(self, long_mode: Union[int, None]) -> Tuple[List[LabeledPeakCluster], Tuple[float, float]]:
+    def get_mode_sequence(self, long_mode: int, trans_mode: Union[int, None] = None) -> Tuple[List[LabeledPeakCluster], Tuple[float, float]]:
         """
-        Determines the slice bounds in which the requested longitudinal mode exists compared to its successor.
+        Determines the data_slice bounds in which the requested longitudinal mode exists compared to its successor.
         :param long_mode: Requested longitudinal mode number
-        :return: Tuple( All clusters corresponding to longitudinal mode, slice boundary in arbitrary cavity space units)
+        :return: Tuple( All clusters corresponding to longitudinal mode, data_slice boundary in arbitrary cavity space units)
         """
-        # Create sequence slice
-        cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
-        next_mode = self.get_labeled_clusters(long_mode=long_mode + 1, trans_mode=None)
+        if trans_mode is None:  # Sequence entire longitudinal mode slice
+            # Create sequence data_slice
+            cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
+            next_mode = self.get_labeled_clusters(long_mode=long_mode + 1, trans_mode=None)
 
-        def estimate_q(sequence: List[LabeledPeakCluster]) -> float:
-            if len(sequence) < 2:
-                raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
-            distances = [sequence[i+1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
-            return sequence[0].get_avg_x - np.mean(distances)
+            def estimate_q(sequence: List[LabeledPeakCluster]) -> float:
+                if len(sequence) < 2:
+                    raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
+                distances = [sequence[i+1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
+                return sequence[0].get_avg_x - np.mean(distances)
 
-        value_slice = (estimate_q(cluster_array), estimate_q(next_mode))
-        if value_slice[0] > value_slice[1]:  # Swap slice order to maintain (low, high) bound structure
-            value_slice = (value_slice[1], value_slice[0])
-        return cluster_array, value_slice
+            value_slice = (estimate_q(cluster_array), estimate_q(next_mode))
+            if value_slice[0] > value_slice[1]:  # Swap data_slice order to maintain (low, high) bound structure
+                value_slice = (value_slice[1], value_slice[0])
+            return cluster_array, value_slice
+        else:  # Sequence specific transverse mode
+            cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode)
+            return cluster_array, cluster_array[0].get_value_slice
 
     @staticmethod
     def _get_clusters(peak_list: Union[List[PeakData], PeakCollection]) -> List[PeakCluster]:
@@ -166,8 +176,8 @@ def flatten_clusters(data: List[PeakCluster]) -> List[PeakData]:
     return result
 
 
-def get_slice(data_class: SyncMeasData, value_slice: Tuple[float, float]) -> Tuple[int, int]:
-    """Transforms arbitrary value slice into index specific slice"""
+def get_value_to_data_slice(data_class: SyncMeasData, value_slice: Tuple[float, float]) -> Tuple[int, int]:
+    """Transforms arbitrary value data_slice into index specific data_slice"""
 
     def find_nearest(array: np.ndarray, value: float) -> int: # Assumes data is sorted
         index = np.searchsorted(array, value, side="left")
@@ -176,7 +186,7 @@ def get_slice(data_class: SyncMeasData, value_slice: Tuple[float, float]) -> Tup
         else:
             return index
 
-    return find_nearest(array=data_class.x_data, value=value_slice[0]), find_nearest(array=data_class.x_data, value=value_slice[1])
+    return find_nearest(array=data_class.x_boundless_data, value=value_slice[0]), find_nearest(array=data_class.x_boundless_data, value=value_slice[1])
 
 
 if __name__ == '__main__':
@@ -186,10 +196,10 @@ if __name__ == '__main__':
     # Construct measurement class
     ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0')
     ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration1')
-    # Optional, define slice
-    # slice = (1050000, 1150000)
-    # measurement_class.slicer = slice  # Zooms in on relevant data part
-    # measurement_class2.slicer = slice
+    # Optional, define data_slice
+    # data_slice = (1050000, 1150000)
+    # measurement_class.slicer = data_slice  # Zooms in on relevant data part
+    # measurement_class2.slicer = data_slice
 
     # Collect peaks
     peak_collection_itt0 = LabeledPeakCollection(identify_peaks(measurement_class))
@@ -205,14 +215,14 @@ if __name__ == '__main__':
     # ax = plot_peak_collection(axis=ax, data=peak_collection_itt0)  # All peaks
 
     cluster_array, value_slice = peak_collection_itt0.get_mode_sequence(long_mode=0)
-    data_slice = get_slice(measurement_class, value_slice)
+    data_slice = get_value_to_data_slice(measurement_class, value_slice)
 
     ax = plot_peak_collection(axis=ax, data=flatten_clusters(data=cluster_array))
 
     ax.axvline(x=value_slice[0], color='r', alpha=1)
     ax.axvline(x=value_slice[1], color='g', alpha=1)
 
-    ax2.set_xlim(value_slice)
+    measurement_class.slicer = data_slice
     ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
     ax2 = plot_peak_collection(axis=ax2, data=flatten_clusters(data=cluster_array))
 
