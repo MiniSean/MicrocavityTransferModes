@@ -13,29 +13,23 @@ class PeakData:  # (float):
     def __init__(self, data: SyncMeasData, index: int):
         # (self, loc: float, height: float)
         self._data = data
-        self._index_pointer = index
+        self._index_pointer = self._data.slicer[0] + index
         super(float).__init__()
 
-    def update_index(self) -> Union['PeakData', None]:
-        """
-        Updates internal reference index based on new slice.
-        If updated index falls outside slice domain, return None, else return self.
-        """
-        if self._data.slicer is None:
-            return self
-        self._index_pointer -= self._data.slicer[0]
-        return self if self._data.inside_slice_range(self._index_pointer) else None
+    @property
+    def relevant(self) -> bool:
+        return self._data.inside_global_slice_range(self._index_pointer)
 
     @property
-    def get_x(self):
-        return self._data.x_data[self._index_pointer]
+    def get_x(self) -> float:
+        return self._data.x_boundless_data[self._index_pointer]
 
     @property
-    def get_y(self):
-        return self._data.y_data[self._index_pointer]
+    def get_y(self) -> float:
+        return self._data.y_boundless_data[self._index_pointer]
 
     def get_x_offset(self, offset_index: int):
-        return self._data.x_data[self._index_pointer + offset_index]
+        return self._data.x_boundless_data[self._index_pointer + offset_index]
 
 
 class PeakCollection:
@@ -79,15 +73,17 @@ if __name__ == '__main__':
     from src.plot_npy import prepare_measurement_plot, plot_class
     # Construct measurement class
     ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0')
-    # Optional, define slice
-    slice = (1050000, 1150000)
-    measurement_class.slicer = slice  # Zooms in on relevant data part
+    # Optional, define data_slice
+    data_slice = (1050000, 1150000)
+    measurement_class.slicer = data_slice  # Zooms in on relevant data part
 
     # Collect noise ground level
     noise_ceiling = identify_noise_ceiling(measurement_class)
     # Collect peaks
     peak_collection = identify_peaks(measurement_class)
 
+    data_slice = (1090000, 1120000)
+    measurement_class.slicer = data_slice  # Zooms in on relevant data part
     # Apply axis draw/modification
     ax = plot_class(axis=ax, measurement_class=measurement_class)
 
@@ -98,6 +94,8 @@ if __name__ == '__main__':
     for i, peak_data in enumerate(peak_collection):
         if i > 1000:  # safety break
             break
+        # if peak_data.relevant:
+
         ax.plot(peak_data.get_x, peak_data.get_y, 'o', color='r', alpha=1)
         # ax.axvline(x=peak_data.get_x, ymax=peak_data.get_y, color='r', alpha=1)
 
