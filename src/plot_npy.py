@@ -53,11 +53,7 @@ def plot_cluster_collection(axis: plt.axes, data: Union[List[LabeledPeakCluster]
 
 def plot_specific_peaks(axis: plt.axes, data: LabeledPeakCollection, long_mode: Union[int, None], trans_mode: Union[int, None]) -> plt.axes:
     filtered_data = data.get_labeled_peaks(long_mode=long_mode, trans_mode=trans_mode)
-    # Plot peaks
-    x = [peak.get_x for peak in filtered_data]
-    y = [peak.get_y for peak in filtered_data]
-    axis.plot(x, y, 'o', label=f'Mode(L:{"all" if long_mode is None else long_mode}, T:{"all" if trans_mode is None else trans_mode})')
-    return get_standard_axis(axis=axis)
+    return plot_peak_collection(axis=axis, data=filtered_data, label=f'Mode(L:{"all" if long_mode is None else long_mode}, T:{"all" if trans_mode is None else trans_mode})')
 
 
 def prepare_measurement_plot(measure_file: str = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0') -> Tuple[plt.axes, SyncMeasData]:
@@ -81,18 +77,18 @@ if __name__ == '__main__':
     file_samp = 'samples_1s_10V_rate1300000.0'
     # Store plot figure and axis
     fig, ax = plt.subplots()
-    # Optional, define slice
+    # Optional, define data_slice
     slice = (1050000, 1150000)
     # Construct measurement class
     measurement_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)
 
     # Apply axis draw/modification
-    # ax = plot_npy(axis=ax, measurement_file=file_meas, sample_file=file_samp, slice=None)
+    # ax = plot_npy(axis=ax, measurement_file=file_meas, sample_file=file_samp, data_slice=None)
     ax = plot_class(axis=ax, measurement_class=measurement_class)
 
     fig2, ax2 = plt.subplots()
     measurement_class.slicer = slice
-    # ax2 = plot_npy(axis=ax2, measurement_file=file_meas, sample_file=file_samp, slice=slice)
+    # ax2 = plot_npy(axis=ax2, measurement_file=file_meas, sample_file=file_samp, data_slice=data_slice)
     ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
     # Show figure plot
     plt.show()
