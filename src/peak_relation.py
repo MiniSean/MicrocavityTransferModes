@@ -189,6 +189,10 @@ def get_value_to_data_slice(data_class: SyncMeasData, value_slice: Tuple[float, 
     return find_nearest(array=data_class.x_boundless_data, value=value_slice[0]), find_nearest(array=data_class.x_boundless_data, value=value_slice[1])
 
 
+def get_slice_range(data_slice: Tuple[int, int]) -> int:
+    return abs(data_slice[0] - data_slice[1])
+
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class

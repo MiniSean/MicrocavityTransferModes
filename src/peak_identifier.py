@@ -28,6 +28,10 @@ class PeakData:  # (float):
     def get_y(self) -> float:
         return self._data.y_boundless_data[self._index_pointer]
 
+    @property
+    def get_relative_index(self) -> int:
+        return self._index_pointer - self._data.slicer[0]
+
     def get_x_offset(self, offset_index: int):
         return self._data.x_boundless_data[self._index_pointer + offset_index]
 
