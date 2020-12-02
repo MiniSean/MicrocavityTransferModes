@@ -65,23 +65,18 @@ def plot_wavelength_vs_reflection():
 
 
 if __name__ == '__main__':
-    _lambda_c = 640  # nm
-    _n_1 = 1.46
-    _n_2 = 2.09
-    _depth_1 = quarter_phase_depth(_lambda_c, _n_1)
-    _depth_2 = quarter_phase_depth(_lambda_c, _n_2)
-    _matrix_1 = planar_transfer_matrix(_depth_1, _n_1)
-    _matrix_2 = planar_transfer_matrix(_depth_2, _n_2)
-    _layers = 2
+    from src.import_data import import_npy, fit_voltage_to_distance
 
-    print(_depth_1)
-    print(_depth_2)
-    print(_matrix_1(_lambda_c))
-    print(_matrix_2(_lambda_c))
+    # Reference files
+    file_samp = 'samples_1s_10V_rate1300000.0'
+    filename_base = 'transrefl_tisaph_1s_10V_PMT4_rate1300000.0'
 
-    _multi_matrix = layered_matrix(_matrix_1, _matrix_2, _layers)
-    print(_multi_matrix(_lambda_c))
+    data_array = import_npy(filename_base)[0]
+    sample = import_npy(file_samp)
 
-    print(dielectric_layered_matrix(_layers, _n_1, _n_2, _lambda_c)(_lambda_c))
+    fig, ax = plt.subplots()
+    ax.plot(sample, data_array)
+    # plt.show()
 
-    plot_wavelength_vs_reflection()
+    result = fit_voltage_to_distance(voltage_array=sample, reference_transmission_array=data_array)
+    print(result)
