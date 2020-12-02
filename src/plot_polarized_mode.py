@@ -75,7 +75,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
         axis.scatter(xp, zp, yp, marker='o')
 
     poly = PolyCollection(verts)
-    poly.set_alpha(0.7)
+    poly.set_alpha(1)
     axis.add_collection3d(poly, zs=zs, zdir='y')
 
     axis.set_xlabel('Sliced Measurement index [a.u.]')
@@ -83,7 +83,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
     axis.set_ylabel('Measurement iterations')
     axis.set_ylim3d(-1, len(zs) + 1)
     axis.set_zlabel('Transmission [a.u.]')
-    axis.set_zlim3d(0, .5)
+    axis.set_zlim3d(0, 1)
     # Set viewport
     axis.view_init(elev=22, azim=-15)
     return axis
@@ -96,13 +96,14 @@ if __name__ == '__main__':
     file_samp = 'samples_1s_10V_rate1300000.0'
 
     # Measurement files
-    # filename_base = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration'
-    filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0_pol{:0=2d}0'.format(i) for i in range(10)]
+    # filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'.format(i) for i in range(10)]
+    filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0_pol{:0=2d}0'.format(i) for i in range(19)]
+
     meas_iterations = [SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None) for file_meas in filenames]
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
     labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
 
-    # plot_3d_sequence(data_classes=meas_iterations, long_mode=0, trans_mode=1)
+    plot_3d_sequence(data_classes=meas_iterations, long_mode=0, trans_mode=1)
 
     def plot_cross_sections():
         # Test
@@ -128,6 +129,6 @@ if __name__ == '__main__':
 
         ax_full.legend()
 
-    plot_cross_sections()
+    # plot_cross_sections()
 
     plt.show()

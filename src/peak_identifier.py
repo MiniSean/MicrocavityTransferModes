@@ -4,11 +4,11 @@ from scipy.signal import find_peaks, peak_prominences
 from src.import_data import SyncMeasData
 
 
-class PeakData:  # (float):
+class PeakData(float):
 
-    # def __new__(cls, data: SyncMeasData, index: int, *args, **kwargs):
-    #     value = data.y_data[index]
-    #     return float.__new__(cls, value)
+    def __new__(cls, data: SyncMeasData, index: int, *args, **kwargs):
+        value = data.y_data[index]
+        return float.__new__(cls, value)
 
     def __init__(self, data: SyncMeasData, index: int):
         # (self, loc: float, height: float)
@@ -64,7 +64,7 @@ def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
 def identify_noise_ceiling(meas_data: SyncMeasData) -> float:
     mean = np.mean(meas_data.data_array[0])
     std = np.std(meas_data.data_array[0])
-    return mean + .24 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
+    return .003  #mean + .24 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
 
 
 def identify_peak_prominence(meas_data: SyncMeasData) -> Tuple[np.ndarray, np.ndarray]:
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     # Collect peaks
     peak_collection = identify_peaks(measurement_class)
 
-    data_slice = (1090000, 1120000)
+    # data_slice = (1090000, 1120000)
     measurement_class.slicer = data_slice  # Zooms in on relevant data part
     # Apply axis draw/modification
     ax = plot_class(axis=ax, measurement_class=measurement_class)
@@ -98,9 +98,8 @@ if __name__ == '__main__':
     for i, peak_data in enumerate(peak_collection):
         if i > 1000:  # safety break
             break
-        # if peak_data.relevant:
-
-        ax.plot(peak_data.get_x, peak_data.get_y, 'o', color='r', alpha=1)
+        if peak_data.relevant:
+            ax.plot(peak_data.get_x, peak_data.get_y, 'o', color='r', alpha=1)
         # ax.axvline(x=peak_data.get_x, ymax=peak_data.get_y, color='r', alpha=1)
 
     # Show

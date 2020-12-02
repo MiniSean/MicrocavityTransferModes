@@ -74,10 +74,13 @@ class LabeledPeakCollection(PeakCollection):
     def _set_labeled_peaks(self, optical_mode_collection: PeakCollection) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
         mode_clusters = sorted(mode_clusters, key=lambda x: -x.get_avg_x)  # Sort clusters from small to large cavity
+        mode_clusters_height_sorted = sorted(mode_clusters, key=lambda x: -x.get_avg_y)
+        height_detection_limit = mode_clusters_height_sorted[0].get_avg_y * 0.3  # TODO: Hardcoded 8 suspected long modes
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
         for cluster in mode_clusters:
-            if cluster.get_avg_y > .5:  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
+            # TODO: specify the number of long modes you expect (in this case 8)
+            if np.max(cluster) >= height_detection_limit:  # > .5:  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
                 ordered_clusters.append([cluster])
             elif len(ordered_clusters) == 0:
                 continue  # Skip junk peaks before first fundamental mode
@@ -141,7 +144,7 @@ class LabeledPeakCollection(PeakCollection):
         std = np.std(distances)
         # Detect statistical outliers
         outliers = [i for i, distance in enumerate(distances) if
-                    abs(distance) > mean + .65 * std]  # TODO: Hardcoded cluster separation
+                    abs(distance) > mean + .6 * std]  # TODO: Hardcoded cluster separation
         # Construct cluster splitting
         split_indices = (0,) + tuple(data + 1 for data in outliers) + (len(cluster_data) + 1,)
         return [PeakCluster(peak_list[start: end]) for start, end in zip(split_indices, split_indices[1:])]
@@ -196,9 +199,10 @@ def get_slice_range(data_slice: Tuple[int, int]) -> int:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class
+    from src.peak_identifier import identify_noise_ceiling
 
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol060')
     ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration1')
     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
@@ -207,9 +211,10 @@ if __name__ == '__main__':
 
     # Collect peaks
     peak_collection_itt0 = LabeledPeakCollection(identify_peaks(measurement_class))
-    peak_collection_itt1 = LabeledPeakCollection(identify_peaks(measurement_class2))
+    print(len(peak_collection_itt0))
+    # peak_collection_itt1 = LabeledPeakCollection(identify_peaks(measurement_class2))
     # Get correlation offset
-    offset_info = get_cluster_offset(peak_collection_itt0, peak_collection_itt1)
+    # offset_info = get_cluster_offset(peak_collection_itt0, peak_collection_itt1)
 
     # Plot measurement
     ax = plot_class(axis=ax, measurement_class=measurement_class)
@@ -221,14 +226,21 @@ if __name__ == '__main__':
     cluster_array, value_slice = peak_collection_itt0.get_mode_sequence(long_mode=0)
     data_slice = get_value_to_data_slice(measurement_class, value_slice)
 
-    ax = plot_peak_collection(axis=ax, data=flatten_clusters(data=cluster_array))
+    ax = plot_peak_collection(axis=ax, data=flatten_clusters(data=peak_collection_itt0.get_clusters))
 
     ax.axvline(x=value_slice[0], color='r', alpha=1)
     ax.axvline(x=value_slice[1], color='g', alpha=1)
 
     measurement_class.slicer = data_slice
     ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
-    ax2 = plot_peak_collection(axis=ax2, data=flatten_clusters(data=cluster_array))
+    for cluster in cluster_array:
+        ax2 = plot_peak_collection(axis=ax2, data=cluster)
+
+    ax = plot_specific_peaks(axis=ax, data=peak_collection_itt0, long_mode=None, trans_mode=0)
+
+    # Draw noise h-lines
+    noise_ceiling = identify_noise_ceiling(measurement_class)
+    ax.axhline(y=noise_ceiling, color='r')
 
     # Show
     ax2.legend()
