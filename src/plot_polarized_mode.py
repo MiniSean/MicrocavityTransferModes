@@ -49,6 +49,7 @@ if __name__ == '__main__':
 
     # Test
     index = 0
+    long_mode = 0
 
     ax_full, measurement_class = prepare_measurement_plot(filenames[index])
     ax_full = plot_class(axis=ax_full, measurement_class=measurement_class)
