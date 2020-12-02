@@ -62,6 +62,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
     xs = np.arange(get_slice_range(leading_slice))
     zs = np.arange(len(data_slices))
     verts = []
+    peaks = []
     for i, slice in enumerate(data_slices):
         data_class = data_classes[i]
         data_class.slicer = slice
@@ -69,19 +70,53 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
         verts.append(list(zip(xs, ys)))
         # Peak scatter plot
         peak_list = flatten_clusters(data=cluster_arrays[i])
+        peaks.append(peak_list)  # Collect peaks for polarisation cross section
         yp = [peak.get_y for peak in peak_list]
         xp = [peak.get_relative_index for peak in peak_list]
         zp = [zs[i] for j in range(len(peak_list))]
         axis.scatter(xp, zp, yp, marker='o')
 
+    # Draw individual measurement polygons
     poly = PolyCollection(verts)
-    poly.set_alpha(1)
+    poly.set_alpha(.7)
     axis.add_collection3d(poly, zs=zs, zdir='y')
+
+    # Draw polarisation cross section
+    cross_section_count = len(peaks[0])
+    if all(len(peak_array) == cross_section_count for peak_array in peaks):  # Able to build consistent cross sections
+        cross_peaks = list(map(list, zip(*peaks)))  # Transposes peaks-list to allow for cross section ordering
+        xc = []
+        # Insert 0 bound values
+        zc = list(zs)
+        zc.insert(0, zc[0])
+        zc.append(zc[-1])
+        peak_verts = []
+        face_colors = [[v, .3, .3] for v in np.linspace(.5, 1., len(cross_peaks))]
+        for i, cross_section in enumerate(cross_peaks):
+            yc = [peak.get_y for peak in cross_section]
+            # Insert 0 bound values
+            yc.insert(0, 0)
+            yc.append(0)
+            xc.append(int(np.mean([peak.get_relative_index for peak in cross_section])))
+            peak_verts.append(list(zip(zc, yc)))
+
+            poly = PolyCollection([list(zip(zc, yc))])  # peak_verts
+            poly.set_alpha(1)
+            poly.set_facecolor(face_colors[i])
+            axis.add_collection3d(poly, zs=xc[-1], zdir='x')
+
+        # poly = PolyCollection(peak_verts)
+        # poly.set_alpha(1)
+        # axis.add_collection3d(poly, zs=xc, zdir='x')
+        print('plotting')
+    else:
+        logging.warning(f'Cross section (peak) count is not consistent')
 
     axis.set_xlabel('Sliced Measurement index [a.u.]')
     axis.set_xlim3d(0, len(xs))
-    axis.set_ylabel('Measurement iterations')
+    axis.set_ylabel('Polarisation [10 Degree]')  # 'Measurement iterations')
     axis.set_ylim3d(-1, len(zs) + 1)
+    # axis.set_yticks([str(10 * angle) for angle in zs])
     axis.set_zlabel('Transmission [a.u.]')
     axis.set_zlim3d(0, 1)
     # Set viewport
