@@ -77,6 +77,7 @@ def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
 
 
 def fit_voltage_to_distance(voltage_array: np.ndarray, reference_transmission_array: np.ndarray):
+    """4th Edition Optics Eugene Hecht. page 419"""
 
     def fit_function(voltage: np.ndarray, b1, b2, b3, A, B, C) -> Callable[[np.ndarray, Any], np.ndarray]:
         wl = 794  # Reference laser frequency
