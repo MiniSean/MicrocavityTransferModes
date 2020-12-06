@@ -51,6 +51,9 @@ class PeakCollection:
     def __getitem__(self, item):
         return self._list.__getitem__(item)
 
+    def __setitem__(self, key, value):
+        return self._list.__setitem__(key, value)
+
     def index(self, *args, **kwargs):
         return self._list.index(*args, **kwargs)
 

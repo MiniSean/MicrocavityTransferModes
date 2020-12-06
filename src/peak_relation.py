@@ -1,11 +1,15 @@
 import numpy as np
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict
 from src.import_data import SyncMeasData
 from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 
 
 class LabeledPeak(PeakData):
     """PeakData with additional longitudinal and transverse mode labels"""
+
+    def __new__(cls, peak: PeakData, **kwargs):
+        value = peak._data.y_data[peak._raw_index]
+        return float.__new__(cls, value)
 
     def __init__(self, peak: PeakData, long_mode: int, trans_mode: int):
         super().__init__(peak._data, peak._raw_index)
@@ -33,6 +37,9 @@ class PeakCluster:
 
     def __getitem__(self, item):
         return self._list.__getitem__(item)
+
+    def __setitem__(self, key, value):
+        return self._list.__setitem__(key, value)
 
     @property
     def get_avg_x(self) -> float:
@@ -70,8 +77,9 @@ class LabeledPeakCollection(PeakCollection):
     def __init__(self, optical_mode_collection: PeakCollection):
         self._mode_clusters = self._set_labeled_peaks(optical_mode_collection)  # Single calculation for performance
         super().__init__(flatten_clusters(data=self._mode_clusters))
+        self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
 
-    def _set_labeled_peaks(self, optical_mode_collection: PeakCollection) -> List[LabeledPeakCluster]:
+    def _set_labeled_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
         mode_clusters = sorted(mode_clusters, key=lambda x: -x.get_avg_x)  # Sort clusters from small to large cavity
         mode_clusters_height_sorted = sorted(mode_clusters, key=lambda x: -x.get_avg_y)
@@ -92,6 +100,20 @@ class LabeledPeakCollection(PeakCollection):
             for trans_mode_id, cluster in enumerate(cluster_array):
                 result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id, trans_mode=trans_mode_id))
         return result  # [peak_data for peak_data in optical_mode_collection]
+
+    def _set_q_dict(self, cluster_array: List[LabeledPeakCluster]) -> Dict[int, Union[LabeledPeak, None]]:
+        result = {}
+        data_class = self._list[0]._data
+        for i in range(cluster_array[-1].get_longitudinal_mode_id):
+            try:  # find q mode estimate until not enough data points are available
+                value = self.get_q_estimate(long_mode=i)
+            except ValueError:  # Add None identifier for last q mode
+                result[i] = None
+                return result
+            data_index = find_nearest_index(array=data_class.x_boundless_data, value=value)
+            peak = LabeledPeak(PeakData(data=data_class, index=data_index), long_mode=i, trans_mode=-1)
+            result[i] = peak
+        return result
 
     def get_labeled_clusters(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeakCluster]:
         result = []
@@ -119,21 +141,20 @@ class LabeledPeakCollection(PeakCollection):
         if trans_mode is None:  # Sequence entire longitudinal mode slice
             # Create sequence data_slice
             cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
-            next_mode = self.get_labeled_clusters(long_mode=long_mode + 1, trans_mode=None)
-
-            def estimate_q(sequence: List[LabeledPeakCluster]) -> float:
-                if len(sequence) < 2:
-                    raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
-                distances = [sequence[i+1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
-                return sequence[0].get_avg_x - np.mean(distances)
-
-            value_slice = (estimate_q(cluster_array), estimate_q(next_mode))
+            value_slice = (self.get_q_estimate(long_mode=long_mode), self.get_q_estimate(long_mode=long_mode + 1))
             if value_slice[0] > value_slice[1]:  # Swap data_slice order to maintain (low, high) bound structure
                 value_slice = (value_slice[1], value_slice[0])
             return cluster_array, value_slice
         else:  # Sequence specific transverse mode
             cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode)
             return cluster_array, cluster_array[0].get_value_slice
+
+    def get_q_estimate(self, long_mode: int) -> float:
+        sequence = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
+        if len(sequence) < 2:
+            raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
+        distances = [sequence[i + 1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
+        return sequence[0].get_avg_x - np.mean(distances)
 
     @staticmethod
     def _get_clusters(peak_list: Union[List[PeakData], PeakCollection]) -> List[PeakCluster]:
@@ -180,17 +201,17 @@ def flatten_clusters(data: List[PeakCluster]) -> List[PeakData]:
     return result
 
 
+def find_nearest_index(array: np.ndarray, value: float) -> int: # Assumes data is sorted
+    index = np.searchsorted(array, value, side="left")
+    if index > 0 and (index == len(array) or abs(value - array[index-1]) < abs(value - array[index])):
+        return index-1
+    else:
+        return index
+
+
 def get_value_to_data_slice(data_class: SyncMeasData, value_slice: Tuple[float, float]) -> Tuple[int, int]:
     """Transforms arbitrary value data_slice into index specific data_slice"""
-
-    def find_nearest(array: np.ndarray, value: float) -> int: # Assumes data is sorted
-        index = np.searchsorted(array, value, side="left")
-        if index > 0 and (index == len(array) or abs(value - array[index-1]) < abs(value - array[index])):
-            return index-1
-        else:
-            return index
-
-    return find_nearest(array=data_class.x_boundless_data, value=value_slice[0]), find_nearest(array=data_class.x_boundless_data, value=value_slice[1])
+    return find_nearest_index(array=data_class.x_boundless_data, value=value_slice[0]), find_nearest_index(array=data_class.x_boundless_data, value=value_slice[1])
 
 
 def get_slice_range(data_slice: Tuple[int, int]) -> int:
