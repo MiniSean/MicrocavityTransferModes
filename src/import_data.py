@@ -1,9 +1,7 @@
 import os
 import numpy as np
-from scipy.optimize import curve_fit
 # import logging
-from typing import Tuple, Optional, Union, Callable, Any
-import matplotlib.pyplot as plt
+from typing import Tuple, Optional
 DATA_DIR = 'data/Trans'
 
 
@@ -74,20 +72,3 @@ def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
     min_index = max((0, min(slice)))  # min(data_slice)
     max_index = min((len(array)-1, max(slice)))  # max(data_slice)
     return array[min_index: max_index]
-
-
-def fit_voltage_to_distance(voltage_array: np.ndarray, reference_transmission_array: np.ndarray):
-    """4th Edition Optics Eugene Hecht. page 419"""
-
-    def fit_function(voltage: np.ndarray, b1, b2, b3, A, B, C) -> Callable[[np.ndarray, Any], np.ndarray]:
-        wl = 794  # Reference laser frequency
-        return A + B / (1 + C * np.cos(np.pi * 2 / (wl / 2) * (b1 * voltage + b2 + b1 * b3 * voltage ** 2)))
-
-    initial_condition = [270, 0, -0.00, 0.1, 0.02, -0.7]
-    popt, pvoc = curve_fit(f=fit_function, xdata=voltage_array, ydata=reference_transmission_array, p0=initial_condition)
-    # Temp
-    yout = fit_function(voltage_array, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5])
-    plt.plot(voltage_array, reference_transmission_array)
-    plt.plot(voltage_array, yout)
-    plt.show()
-    return popt

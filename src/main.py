@@ -65,7 +65,8 @@ def plot_wavelength_vs_reflection():
 
 
 if __name__ == '__main__':
-    from src.import_data import import_npy, fit_voltage_to_distance
+    from src.import_data import import_npy
+    from src.sample_conversion import fit_voltage_to_distance
 
     # Reference files
     file_samp = 'samples_1s_10V_rate1300000.0'
@@ -74,8 +75,8 @@ if __name__ == '__main__':
     data_array = import_npy(filename_base)[0]
     sample = import_npy(file_samp)
 
-    fig, ax = plt.subplots()
-    ax.plot(sample, data_array)
+    # fig, ax = plt.subplots()
+    # ax.plot(sample, data_array)
     # plt.show()
 
     result = fit_voltage_to_distance(voltage_array=sample, reference_transmission_array=data_array)
