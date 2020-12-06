@@ -113,6 +113,7 @@ class LabeledPeakCollection(PeakCollection):
         """
         Determines the data_slice bounds in which the requested longitudinal mode exists compared to its successor.
         :param long_mode: Requested longitudinal mode number
+        :param trans_mode: Requested transverse mode number
         :return: Tuple( All clusters corresponding to longitudinal mode, data_slice boundary in arbitrary cavity space units)
         """
         if trans_mode is None:  # Sequence entire longitudinal mode slice
