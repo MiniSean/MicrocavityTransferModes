@@ -13,6 +13,7 @@ class PeakData(float):
     def __init__(self, data: SyncMeasData, index: int):
         # (self, loc: float, height: float)
         self._data = data
+        self._raw_index = index
         self._index_pointer = self._data.slicer[0] + index
         super(float).__init__()
 

@@ -7,8 +7,8 @@ from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 class LabeledPeak(PeakData):
     """PeakData with additional longitudinal and transverse mode labels"""
 
-    def __init__(self, data: SyncMeasData, index: int, long_mode: int, trans_mode: int):
-        super().__init__(data, index)
+    def __init__(self, peak: PeakData, long_mode: int, trans_mode: int):
+        super().__init__(peak._data, peak._raw_index)
         self._long_mode = long_mode
         self._trans_mode = trans_mode
 
@@ -53,7 +53,7 @@ class PeakCluster:
 
 class LabeledPeakCluster(PeakCluster):
     def __init__(self, data: List[PeakData], long_mode: int, trans_mode: int):
-        super().__init__([LabeledPeak(data=peak._data, index=peak._index_pointer, long_mode=long_mode, trans_mode=trans_mode) for peak in data])
+        super().__init__([LabeledPeak(peak=peak, long_mode=long_mode, trans_mode=trans_mode) for peak in data])
         self._long_mode = long_mode
         self._trans_mode = trans_mode
 
