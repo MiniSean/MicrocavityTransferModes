@@ -70,8 +70,9 @@ if __name__ == '__main__':
     # Test plot
     def peak_inclusion(peak: NormalizedPeak) -> bool:
         return peak.get_norm_x is not None and 0 <= peak.get_norm_x <= 1
-    alpha = .5
-    for i in range(4):
+    alpha = 1
+    nr_sequences = 1
+    for i in range(nr_sequences):
         cluster_array, value_slice = norm_peak_collection.get_mode_sequence(long_mode=i)
         # Get normalized measurement
         x_sample, y_measure = norm_peak_collection.get_normalized_meas_data_slice(union_slice=value_slice)
@@ -81,7 +82,24 @@ if __name__ == '__main__':
         y = [peak.get_y for peak in peak_array if peak_inclusion(peak)]
         x = [peak.get_norm_x for peak in peak_array if peak_inclusion(peak)]
         ax.plot(x, y, 'o', alpha=alpha)
-
     ax.set_yscale('log')
+    ax.set_title(f'Normalized sequences')
+    ax.set_xlabel('Relative distance between estimated q-modes [a.u.]')
+
+    fig, ax2 = plt.subplots()
+    for i in range(nr_sequences):
+        cluster_array, value_slice = norm_peak_collection.get_mode_sequence(long_mode=i)
+        # Get normalized measurement
+        x_sample, y_measure = norm_peak_collection.get_measurement_data_slice(union_slice=value_slice)
+        ax2.plot(x_sample, y_measure, alpha=alpha)
+        # Get normalized peaks
+        peak_array = flatten_clusters(data=cluster_array)
+        y = [peak.get_y for peak in peak_array if peak_inclusion(peak)]
+        x = [peak.get_x for peak in peak_array if peak_inclusion(peak)]
+        ax2.plot(x, y, 'o', alpha=alpha)
+    ax2.set_yscale('log')
+    ax2.set_title(f'Standard sequences')
+    ax2.set_xlabel('Sampling Voltage [V]')
+
     plt.show()
 

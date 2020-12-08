@@ -80,7 +80,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot, plot_class
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT5_rate1300000.0itteration0_pol000')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000')
     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
     # measurement_class.slicer = data_slice  # Zooms in on relevant data part
