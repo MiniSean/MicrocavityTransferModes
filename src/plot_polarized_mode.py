@@ -35,6 +35,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
 
     # Store slices to ensure equally size arrays
     cluster_arrays = []
+    q_mode_peaks = []
     data_slices = []
     data_slices_range = []
     for data_class in data_classes:
@@ -42,6 +43,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
         try:
             cluster_array, value_slice = collection.get_mode_sequence(long_mode=long_mode, trans_mode=trans_mode)
             cluster_arrays.append(cluster_array)
+            q_mode_peaks.append(collection.q_dict[long_mode])
         except ValueError:
             logging.warning(f'Longitudinal mode {long_mode} not well defined')
             return axis
@@ -53,13 +55,15 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
         return [num // div + (1 if x < num % div else 0) for x in range (div)]
 
     # Prepare plot data
-    leading_slice = data_slices[data_slices_range.index(max(data_slices_range))]
+    leading_index = data_slices_range.index(max(data_slices_range))
+    leading_slice = data_slices[leading_index]
     for i, slice in enumerate(data_slices):
         range_diff = get_slice_range(leading_slice) - get_slice_range(slice)
         padding = whole_integer_divider(num=range_diff, div=2)
         data_slices[i] = (slice[0] - padding[0], slice[1] + padding[1])
 
-    xs = np.arange(get_slice_range(leading_slice))
+    sliced_xs = data_classes[leading_index].x_boundless_data[leading_slice[0]: leading_slice[1]]
+    xs = np.arange(get_slice_range(leading_slice))  # sliced_xs #
     zs = np.arange(len(data_slices))
     verts = []
     peaks = []
@@ -114,6 +118,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
 
     axis.set_xlabel('Sliced Measurement index [a.u.]')
     axis.set_xlim3d(0, len(xs))
+    # axis.set_xticks(xs)
     axis.set_ylabel('Polarisation [10 Degree]')  # 'Measurement iterations')
     axis.set_ylim3d(-1, len(zs) + 1)
     # axis.set_yticks([str(10 * angle) for angle in zs])
@@ -148,13 +153,13 @@ if __name__ == '__main__':
         ax_full, measurement_class = prepare_measurement_plot(filenames[index])
         ax_full = plot_class(axis=ax_full, measurement_class=measurement_class)
 
-        fig, ax_array = plt.subplots(2, 2)
+        fig, ax_array = plt.subplots(3, 3)
         ax_array = np.ndarray.flatten(ax_array)
-        for long_mode in range(len(ax_array)):
+        for index in range(len(ax_array)):
             # Plot specific longitudinal mode
-            ax_array[long_mode] = plot_isolated_long_mode(axis=ax_array[long_mode], data_class=meas_iterations[index], collection=labeled_peaks[index], long_mode=long_mode, trans_mode=2)
-            if long_mode == 1:
-                ax_array[long_mode].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            ax_array[index] = plot_isolated_long_mode(axis=ax_array[index], data_class=meas_iterations[index], collection=labeled_peaks[index], long_mode=long_mode, trans_mode=1)
+            if index == 2:
+                ax_array[index].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
             # Plot mode separation
             cluster_array, value_slice = labeled_peaks[index].get_mode_sequence(long_mode=long_mode)
@@ -164,6 +169,6 @@ if __name__ == '__main__':
 
         ax_full.legend()
 
-    # plot_cross_sections()
+    plot_cross_sections()
 
     plt.show()
