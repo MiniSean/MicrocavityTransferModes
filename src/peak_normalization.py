@@ -1,3 +1,4 @@
+import numpy as np
 from typing import Tuple, Union, List
 from src.peak_identifier import PeakCollection, PeakData
 from src.peak_relation import LabeledPeakCollection, LabeledPeakCluster, LabeledPeak, flatten_clusters, get_value_to_data_slice
@@ -26,7 +27,7 @@ class NormalizedPeak(LabeledPeak):
         if self._anchor_point[0] is None or self._anchor_point[1] is None or divider == 0:
             return None
         else:
-            return (self.get_x - self._anchor_point[0]) / (self._anchor_point[1] - self._anchor_point[0])
+            return (self.get_x - self._anchor_point[0].get_x) / (self._anchor_point[1].get_x - self._anchor_point[0].get_x)
 
 
 # Adds additional normalization functionality to the labeled peak collection
@@ -38,9 +39,6 @@ class NormalizedPeakCollection(LabeledPeakCollection):
         # Update internals to represent normalized peak data
         self._mode_clusters = self._set_norm_peaks(self._list)
         self._list = flatten_clusters(data=self._mode_clusters)  # Update internal collection with normalized data
-
-    # def _set_collection(self, original_collection: Union[PeakCollection, List[LabeledPeak]]) -> List[NormalizedPeak]:
-    #     return [NormalizedPeak(labeled_peak=labeled_peak, anchor_data=self) for labeled_peak in original_collection]
 
     def _set_norm_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
         cluster_array = self._set_labeled_peaks(optical_mode_collection)
