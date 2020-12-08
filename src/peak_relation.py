@@ -153,7 +153,19 @@ class LabeledPeakCollection(PeakCollection):
         if len(sequence) < 2:
             raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
         distances = [sequence[i + 1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
+        # distances = [sequence[1].get_avg_x - sequence[0].get_avg_x]  # Only relative to first transverse mode
         return sequence[0].get_avg_x - np.mean(distances)
+
+    def get_measurement_data_slice(self, union_slice: Union[Tuple[float, float], Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray]:
+        """Returns sample (x) and measurement (y) array data from requested data/value slice."""
+        # Work with data slice
+        data_class = self._get_data_class
+        data_slice = union_slice
+        if isinstance(data_slice[0], np.float64) and isinstance(data_slice[1], np.float64):
+            data_slice = get_value_to_data_slice(data_class=data_class, value_slice=union_slice)
+
+        # Collect relevant x and y array from data class
+        return data_class.x_boundless_data[data_slice[0]:data_slice[1]], data_class.y_boundless_data[data_slice[0]:data_slice[1]]
 
     @staticmethod
     def _get_clusters(peak_list: Union[List[PeakData], PeakCollection]) -> List[PeakCluster]:

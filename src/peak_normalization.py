@@ -49,21 +49,41 @@ class NormalizedPeakCollection(LabeledPeakCollection):
                 cluster[j] = NormalizedPeak(labeled_peak=peak, anchor_data=self)
         return cluster_array
 
+    def get_normalized_meas_data_slice(self, union_slice: Union[Tuple[float, float], Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray]:
+        # Assumes ordered x_array
+        x_array, y_array = self.get_measurement_data_slice(union_slice=union_slice)
+        min_value = min(x_array)
+        rel_max_value = max(x_array) - min_value
+        x_array = (x_array - min_value) / rel_max_value  # Normalize array
+        y_array = np.asarray([y for _, y in sorted(zip(x_array, y_array), key=lambda pair: -pair[0])])  # Sort array
+        x_array = np.asarray(sorted(x_array, key=lambda x: x))  # Sort array
+        return x_array, y_array
+
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot
     from src.peak_identifier import identify_peaks
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000')
     # Normalized peak collection
-    norm_peak_collection = NormalizedPeakCollection(LabeledPeakCollection(identify_peaks(measurement_class)))
+    norm_peak_collection = NormalizedPeakCollection(identify_peaks(measurement_class))
 
     # Test plot
-    cluster_array, value_slice = norm_peak_collection.get_mode_sequence(long_mode=0)
-    peak_array = flatten_clusters(data=cluster_array)
-    y = [peak.get_y for peak in peak_array]
-    x = [peak.get_norm_x for peak in peak_array]
-    plt.plot(x, y)
+    def peak_inclusion(peak: NormalizedPeak) -> bool:
+        return peak.get_norm_x is not None and 0 <= peak.get_norm_x <= 1
+    alpha = .5
+    for i in range(4):
+        cluster_array, value_slice = norm_peak_collection.get_mode_sequence(long_mode=i)
+        # Get normalized measurement
+        x_sample, y_measure = norm_peak_collection.get_normalized_meas_data_slice(union_slice=value_slice)
+        ax.plot(x_sample, y_measure, alpha=alpha)
+        # Get normalized peaks
+        peak_array = flatten_clusters(data=cluster_array)
+        y = [peak.get_y for peak in peak_array if peak_inclusion(peak)]
+        x = [peak.get_norm_x for peak in peak_array if peak_inclusion(peak)]
+        ax.plot(x, y, 'o', alpha=alpha)
+
+    ax.set_yscale('log')
     plt.show()
 
