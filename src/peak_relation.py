@@ -103,7 +103,7 @@ class LabeledPeakCollection(PeakCollection):
 
     def _set_q_dict(self, cluster_array: List[LabeledPeakCluster]) -> Dict[int, Union[LabeledPeak, None]]:
         result = {}
-        data_class = self._list[0]._data
+        data_class = self._get_data_class
         for i in range(cluster_array[-1].get_longitudinal_mode_id):
             try:  # find q mode estimate until not enough data points are available
                 value = self.get_q_estimate(long_mode=i)
@@ -170,6 +170,10 @@ class LabeledPeakCollection(PeakCollection):
         # Construct cluster splitting
         split_indices = (0,) + tuple(data + 1 for data in outliers) + (len(cluster_data) + 1,)
         return [PeakCluster(peak_list[start: end]) for start, end in zip(split_indices, split_indices[1:])]
+
+    @property
+    def _get_data_class(self) -> SyncMeasData:
+        return self._list[0]._data
 
     @property
     def get_clusters(self) -> List[LabeledPeakCluster]:
