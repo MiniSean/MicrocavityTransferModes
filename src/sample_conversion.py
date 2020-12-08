@@ -86,7 +86,14 @@ def fit_voltage_to_distance(voltage_array: np.ndarray, reference_transmission_ar
 
     wavelength = 794  # nm
 
-    def fit_function(voltage: np.ndarray, reflectance: float, L0: float, lin_coef: float, exp_coef: float, meas_offset: float) -> Iterator[float]:
+    def fit_length(voltage: np.ndarray) -> np.ndarray:
+        lin_coef = 1000
+        L0 = max(voltage * lin_coef)
+        # cavity_length = lin_coef * voltage + (np.exp(-voltage * exp_coef) - 1)  # Exponential
+        cavity_length = L0 - voltage * lin_coef  # Linear
+        return cavity_length
+
+    def fit_function(voltage: np.ndarray, reflectance: float, meas_offset: float) -> np.ndarray:  # L0: float, lin_coef: float, , exp_coef: float
         """
         Fit function that combines the piezo voltage to displacement function and the Fabry-Perot resonance length to transmission function.
         (voltage: np.ndarray, angle: float, n_refractive: float, reflectance: float, max_length: float, slope: float, offset: float) -> Iterator[float]:
@@ -99,9 +106,7 @@ def fit_voltage_to_distance(voltage_array: np.ndarray, reference_transmission_ar
         :param offset: Temporal shift
         :return: Transmission Output
         """
-        cavity_length = lin_coef * voltage + (np.exp(-voltage * exp_coef) - 1)  # Exponential
-        # cavity_length = a * voltage  # Linear
-        phase_change = (4. * np.pi / wavelength) * (L0 - cavity_length)
+        phase_change = (4. * np.pi / wavelength) * fit_length(voltage)
         q_factor = (4. * reflectance) / (1 - reflectance)**2
         transmission = 1. / (1 + q_factor * np.sin(0.5 * phase_change)**2)
         return transmission + meas_offset
@@ -111,14 +116,23 @@ def fit_voltage_to_distance(voltage_array: np.ndarray, reference_transmission_ar
         # length = L0 - np.fromiter(map(displacement_calculator, voltage), dtype=np.float)
         # return np.fromiter(map(transmission_calculator, length), dtype=np.float)
 
-    initial_condition = [.5, 7.25 * wavelength, 0.5 * wavelength, 1., 0.]
-    bounds = ([0.0, 0, 0, -10., 0.], [1.0, 10 * wavelength, 1.5 * wavelength, 10., 1.])  # (lower, upper) bounds
-    popt, pvoc = curve_fit(f=fit_function, xdata=voltage_array, ydata=reference_transmission_array, p0=initial_condition, bounds=bounds)
-    # Temp
-    # yout = fit_function(voltage_array, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5])
-    yout = fit_function(voltage_array, popt[0], popt[1], popt[2], popt[3], popt[4])
-    plt.plot(voltage_array, reference_transmission_array)
-    plt.plot(voltage_array, yout)
+    initial_condition = [.5, 0.]  #  7.25 * wavelength, 0.5 * wavelength,
+    # bounds = ([0.0, 0, 0, -10., 0.], [1.0, 15 * wavelength, 1.5 * wavelength, 10., 1.])  # (lower, upper) bounds
+    popt, pvoc = curve_fit(f=fit_function, xdata=voltage_array, ydata=reference_transmission_array, p0=initial_condition)  # , bounds=bounds)
+
+    # Display length approximation
+    fig, ax = plt.subplots()
+    ax.plot(voltage_array, fit_length(voltage_array))
+    ax.set_title(f'Cavity length over voltage')
+    ax.set_xlabel('Sampling Voltage [V]')
+    ax.set_ylabel('Cavity Length [nm]')
+
+    fig, ax2 = plt.subplots()
+    ax2.plot(voltage_array, reference_transmission_array)
+    ax2.plot(voltage_array, fit_function(voltage_array, popt[0], popt[1]))
+    ax2.set_title(f'Transmission fit')
+    ax2.set_xlabel('Cavity Length [nm]')
+    ax2.set_ylabel('Transmission [a.u.]')
     return popt
 
 

@@ -1,0 +1,64 @@
+from typing import Optional, List
+from src.import_data import SyncMeasData
+from src.peak_identifier import identify_peaks
+from src.peak_relation import LabeledPeakCluster, flatten_clusters
+from src.peak_normalization import NormalizedPeakCollection
+
+
+class MeasurementAnalysis:
+
+    def __init__(self, meas_file: str, samp_file: str, scan_file: Optional[str]):
+        self._meas_file = meas_file
+        self._samp_file = samp_file
+        self._scan_file = scan_file
+        # Construct synchronized measurement object
+        self._meas_data = SyncMeasData(meas_file=meas_file, samp_file=samp_file, scan_file=scan_file)
+        self._peak_collection = NormalizedPeakCollection(identify_peaks(meas_data=self._meas_data))
+
+    def __str__(self):
+        result = f'--Structural analysis of Transmission measurement---'
+        result += f'\n\n[File Info]:\nMeasurement: {self._meas_file}\nSampling: {self._samp_file}\nReference: {self._scan_file}'
+        result += f'\n\n[Mode Identification Info]:\n{self.get_mode_info}'
+        result += f'\n\n[Peak Identification Info]:\n{self.get_peak_info}'
+        return result
+
+    @property
+    def get_all_mode_clusters(self) -> List[LabeledPeakCluster]:
+        return self._peak_collection.get_labeled_clusters(long_mode=None, trans_mode=None)
+
+    @property
+    def get_only_transverse_clusters(self) -> List[LabeledPeakCluster]:
+        return list(filter(lambda cluster: cluster.get_transverse_mode_id != 0, self.get_all_mode_clusters))
+
+    @property
+    def get_max_transverse_mode(self) -> int:
+        return sorted(self.get_all_mode_clusters, key=lambda cluster: cluster.get_transverse_mode_id)[-1].get_transverse_mode_id
+
+    @property
+    def get_mode_info(self) -> str:
+        _fundamental_clusters = self._peak_collection.get_labeled_clusters(long_mode=None, trans_mode=0)
+        result = f'Fundamental modes detected: {len(_fundamental_clusters)}'
+        result += f'\nNumber of successful (m + n = -1) modes estimated: {len(list(self._peak_collection.q_dict.keys()))}'
+        result += f'\nHighest order Transverse mode detected: m + n = {self.get_max_transverse_mode}'
+        _transverse_only_cluster = self.get_only_transverse_clusters
+        result += f'\nAverage Transverse modes per Fundamental mode: {round(len(_transverse_only_cluster) / len(_fundamental_clusters), 2)}'
+        return result
+
+    @property
+    def get_peak_info(self) -> str:
+        result = f'Average peaks detected per mode (m + n):'
+        for _trans_mode in range(1, self.get_max_transverse_mode):
+            _trans_cluster = self._peak_collection.get_labeled_clusters(long_mode=None, trans_mode=_trans_mode)
+            _average_peaks_per_trans_mode = len(flatten_clusters(data=_trans_cluster)) / len(_trans_cluster)
+            result += f'\n(m + n = {_trans_mode}) Average peaks: {round(_average_peaks_per_trans_mode, 2)}'
+        return result
+
+
+if __name__ == '__main__':
+
+    # File names
+    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000'
+    file_samp = 'samples_1s_10V_rate1300000.0'
+    # Analysis object
+    analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, scan_file=None)
+    print(analysis_obj)
