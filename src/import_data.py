@@ -1,8 +1,8 @@
 import os
 import numpy as np
 # import logging
-from typing import Tuple, Optional
-DATA_DIR = 'data/Trans'
+from typing import Tuple, Optional, List
+DATA_DIR = 'data/Trans/20201125'
 
 
 # Synchronized measurement data
@@ -14,14 +14,23 @@ class SyncMeasData:
      -background high wavelength laser scan (outside cavity stopband) to accurately determine cavity length)
     """
     def __init__(self, meas_file: str, samp_file: str, scan_file: Optional[str]):
-        self.data_array = import_npy(meas_file)  # Contains both transmitted as reflected data
+        self.data_array = import_npy(meas_file)[0]  # Contains both transmitted as reflected data
         self.samp_array = import_npy(samp_file)
+        # Sort data and sample array
+        self.samp_array, [self.data_array] = SyncMeasData.sort_arrays(leading=self.samp_array, follow=[self.data_array])
         self._slicer_bounds = (0, min(len(self.y_boundless_data), len(self.x_boundless_data)))  # For clamping
         self._slicer = self._slicer_bounds
 
+    @staticmethod
+    def sort_arrays(leading: np.ndarray, follow: [np.ndarray]) -> Tuple[np.ndarray, List[np.ndarray]]:
+        follow_result = []
+        for follow_array in follow:
+            follow_result.append(np.asarray([x for _, x in sorted(zip(leading, follow_array), key=lambda pair: pair[0])]))
+        return np.asarray(sorted(leading, key=lambda x: x)), follow_result
+
     # Getters
     def get_transmitted_data(self) -> np.ndarray:
-        return self.data_array[0]
+        return self.data_array
 
     def get_sample_data(self) -> np.ndarray:
         return self.samp_array

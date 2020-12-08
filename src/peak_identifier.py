@@ -66,8 +66,8 @@ def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
 
 
 def identify_noise_ceiling(meas_data: SyncMeasData) -> float:
-    mean = np.mean(meas_data.data_array[0])
-    std = np.std(meas_data.data_array[0])
+    mean = np.mean(meas_data.y_boundless_data)
+    std = np.std(meas_data.y_boundless_data)
     return .003  #mean + .24 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
 
 
