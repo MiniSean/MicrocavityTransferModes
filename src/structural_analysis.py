@@ -47,7 +47,7 @@ class MeasurementAnalysis:
     @property
     def get_peak_info(self) -> str:
         result = f'Average peaks detected per mode (m + n):'
-        for _trans_mode in range(1, self.get_max_transverse_mode):
+        for _trans_mode in range(1, self.get_max_transverse_mode+1):
             _trans_cluster = self._peak_collection.get_labeled_clusters(long_mode=None, trans_mode=_trans_mode)
             _average_peaks_per_trans_mode = len(flatten_clusters(data=_trans_cluster)) / len(_trans_cluster)
             result += f'\n(m + n = {_trans_mode}) Average peaks: {round(_average_peaks_per_trans_mode, 2)}'
