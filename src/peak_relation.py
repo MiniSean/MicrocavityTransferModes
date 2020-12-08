@@ -83,12 +83,11 @@ class LabeledPeakCollection(PeakCollection):
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
         mode_clusters = sorted(mode_clusters, key=lambda x: -x.get_avg_x)  # Sort clusters from small to large cavity
         mode_clusters_height_sorted = sorted(mode_clusters, key=lambda x: -x.get_avg_y)
-        height_detection_limit = mode_clusters_height_sorted[0].get_avg_y * 0.3  # TODO: Hardcoded 8 suspected long modes
+        height_detection_limit = mode_clusters_height_sorted[0].get_avg_y * 0.3  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
         for cluster in mode_clusters:
-            # TODO: specify the number of long modes you expect (in this case 8)
-            if np.max(cluster) >= height_detection_limit:  # > .5:  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
+            if np.max(cluster) >= height_detection_limit:
                 ordered_clusters.append([cluster])
             elif len(ordered_clusters) == 0:
                 continue  # Skip junk peaks before first fundamental mode
@@ -164,9 +163,10 @@ class LabeledPeakCollection(PeakCollection):
         distances = [cluster_data[i + 1] - cluster_data[i] for i in range(len(cluster_data) - 1)]
         mean = np.mean(distances)
         std = np.std(distances)
+        cut_off = 0.03  # mean + .3 * std  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
         outliers = [i for i, distance in enumerate(distances) if
-                    abs(distance) > mean + .6 * std]  # TODO: Hardcoded cluster separation
+                    abs(distance) > cut_off]
         # Construct cluster splitting
         split_indices = (0,) + tuple(data + 1 for data in outliers) + (len(cluster_data) + 1,)
         return [PeakCluster(peak_list[start: end]) for start, end in zip(split_indices, split_indices[1:])]
