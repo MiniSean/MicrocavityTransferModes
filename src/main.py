@@ -81,3 +81,4 @@ if __name__ == '__main__':
 
     result = fit_voltage_to_distance(voltage_array=sample, reference_transmission_array=data_array)
     print(result)
+    plt.show()

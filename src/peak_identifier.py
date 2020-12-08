@@ -80,10 +80,10 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot, plot_class
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT5_rate1300000.0itteration0_pol000')
     # Optional, define data_slice
-    data_slice = (1050000, 1150000)
-    measurement_class.slicer = data_slice  # Zooms in on relevant data part
+    # data_slice = (1050000, 1150000)
+    # measurement_class.slicer = data_slice  # Zooms in on relevant data part
 
     # Collect noise ground level
     noise_ceiling = identify_noise_ceiling(measurement_class)
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     peak_collection = identify_peaks(measurement_class)
 
     # data_slice = (1090000, 1120000)
-    measurement_class.slicer = data_slice  # Zooms in on relevant data part
+    # measurement_class.slicer = data_slice  # Zooms in on relevant data part
     # Apply axis draw/modification
     ax = plot_class(axis=ax, measurement_class=measurement_class)
 

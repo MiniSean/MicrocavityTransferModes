@@ -241,7 +241,7 @@ if __name__ == '__main__':
 
     # Construct measurement class
     ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000')
-    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0itteration1')
+    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT5_rate1300000.0itteration0_pol000')
     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
     # measurement_class.slicer = data_slice  # Zooms in on relevant data part
@@ -281,5 +281,5 @@ if __name__ == '__main__':
     ax.axhline(y=noise_ceiling, color='r')
 
     # Show
-    ax2.legend()
+    # ax2.legend()
     plt.show()
