@@ -52,6 +52,16 @@ class PeakCluster:
         return np.mean([peak.get_y for peak in self._list])
 
     @property
+    def get_std_x(self) -> float:
+        """Returns standard deviation from data point x-location in cluster."""
+        return np.std([peak.get_x for peak in self._list])
+
+    @property
+    def get_std_y(self) -> float:
+        """Returns standard deviation from data point y-location in cluster."""
+        return np.std([peak.get_y for peak in self._list])
+
+    @property
     def get_value_slice(self) -> Tuple[float, float]:
         """Returns standard deviation data point x-location in cluster."""
         margin = .005
