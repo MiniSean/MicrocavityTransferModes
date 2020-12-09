@@ -136,78 +136,121 @@ def fit_voltage_to_distance(voltage_array: np.ndarray, reference_transmission_ar
     return popt
 
 
-def fit_collection():
+def fit_collection() -> Callable[[np.ndarray], np.ndarray]:
     wavelength_hene = 633  # [nm]
 
     # Initial condition
-    b1 = 250
-    b4 = 300
-    b5 = 0.01
+    b1 = 300
+    b2 = 15
+    b3 = -0.5
+    c1 = 0.
     R = 27e3  # radius of curvature
-    L0 = 3400
+    L0 = 3900
     L1 = 600
-    p0 = [b1, b4, b5, R, L0, L1]
+    p0 = [b1, b2, b3, c1, R, L0, L1]
 
-    # Peak samples
-    x_array = np.asarray([peak.get_x for peak in collection_class])
-    q = np.asarray([peak.get_longitudinal_mode_id for peak in collection_class])
-    m = np.asarray([peak.get_transverse_mode_id for peak in collection_class])
+    # Mode samples
+    q_offset = 2
+    x_array = np.asarray([mode.get_avg_x for mode in collection_class.get_clusters])
+    x_std_array = np.asarray([mode.get_std_x for mode in collection_class.get_clusters])
+    q = np.asarray([mode.get_longitudinal_mode_id + q_offset for mode in collection_class.get_clusters])
+    m = np.asarray([mode.get_transverse_mode_id for mode in collection_class.get_clusters])
 
-    def length_func(samples: np.ndarray, _b1: float, _b4: float, _b5: float, _L0: float):
-        return _L0 - (_b1 * samples + _b4 * (np.exp(-samples * _b5) - 1))  # Exponential piezo displacement
+    def length_func(samples: np.ndarray, _b1: float, _b2: float, _b3: float, _c1: float, _L0: float):
+        """Returns expected cavity length depending on the piezo-element displacement behaviour"""
+        _c1 = 0
+        linear_comp = _b1 * (samples + _c1)
+        kwadratic_comp = _b2 * (samples + _c1) ** 2
+        cubic_comp = _b3 * (samples + _c1) ** 3
+        # exp_comp = 1 - np.exp(-_b2 * (samples + _c1))
+        return _L0 - cubic_comp + kwadratic_comp + linear_comp  # Exponential piezo displacement
+        # return _L0 - (linear_comp * exp_comp)
 
     def cavity_func(length: np.ndarray, _R: float, _wavelength: float):
+        """Return Theoretical"""
         return wavelength_hene / 2 * (q + (m + 1) / np.pi * np.arcsin(np.sqrt(np.abs(length / _R))))
 
-    def fit_func(samples: np.ndarray, _b1: float, _b4: float, _b5: float, _R: float, _L0: float, _L1: float):
-        length = length_func(samples, _b1, _b4, _b5, _L0)  # Exponential piezo displacement
+    def fit_func(samples: np.ndarray, _b1: float, _b2: float, _b3: float, _c1: float, _R: float, _L0: float, _L1: float):
+        """Return function to fit to 0: length = cavity_formula(length) + L1 (self consistency)"""
+        length = length_func(samples, _b1, _b2, _b3, _c1, _L0)  # Exponential piezo displacement
         cavity_formula = cavity_func(length, _R, wavelength_hene)  # Cavity length calculation
         return length - cavity_formula - L1
 
     # Fitting
     popt, pcov = curve_fit(fit_func, xdata=x_array, ydata=np.zeros(len(x_array)), p0=p0, maxfev=100000)
+    print(popt)
+    print(f'Estimation parameters:')
+    print(f'Curvature R: {popt[4]} [nm]')
+    print(f'Cavity initial length: {popt[5]} [nm]')
+    print(f'Piezo voltage offset: {popt[3]} [V]')
 
+    # Plot settings
+    dot_fmt = '.'
+    dot_color = 'b'
+    line_width = 0.5
+    cap_width = 1
     # Plot deviation from theory
-    b1, b4, b5, R, L0, L1 = popt
-    fig, ax0 = plt.subplots()
-    ax0.plot(x_array, fit_func(x_array, b1, b4, b5, R, L0, L1), '.', color='b')
-    ax0_twinx = ax0.twinx()
-    ax0_twinx.plot(x_array, fit_func(x_array, p0[0], p0[1], p0[2], p0[3], p0[4], p0[5]), '.', color='orange')  # reference
-    ax0.set_xlabel('Voltage [V]')
-    ax0.set_ylabel('Deviation from theory [nm]', color='b')
-    ax0_twinx.set_ylabel('Pre-fit total length [nm]', color='orange')
+    b1, b2, b3, c1, R, L0, L1 = popt
+    fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+    # Effective difference with uncertainty
+    avg_length_array = fit_func(x_array, b1, b2, b3, c1, R, L0, L1)
+    max_length_array = fit_func(np.add(x_array, x_std_array), b1, b2, b3, c1, R, L0, L1)
+    min_length_array = fit_func(np.add(x_array, -x_std_array), b1, b2, b3, c1, R, L0, L1)
+    yerr_length_array = np.array([np.add(avg_length_array, - max_length_array), np.add(min_length_array, -avg_length_array)])
+    # Plot effective difference
+    ax2.errorbar(x=x_array, y=avg_length_array, yerr=yerr_length_array, fmt=dot_fmt, color=dot_color, linewidth=line_width, capsize=cap_width)
+    ax2.set_title(f'Effective difference (q = q* + {q_offset})')
+    ax2.set_xlabel('Voltage [V]')
+    ax2.set_ylabel('Deviation from theory [nm]')
+    ax2.grid(True)
 
     # Plot cavity length
-    fig, ax1 = plt.subplots()
-    length_array = length_func(x_array, b1, b4, b5, L0) - L1
-    cavity_array = cavity_func(length_array, R, wavelength_hene)
-    ax1.plot(x_array, cavity_array, '.')
-    fig, ax2 = plt.subplots()
-    ax2.plot(x_array, length_array, '.')
-    ax2.set_xlabel('Voltage [V]')
-    ax2.set_ylabel('$L_{cav}$ [nm]')
+    # Fitted length with uncertainty
+    avg_fitted_array = length_func(x_array, b1, b2, b3, c1, L0) - L1
+    max_fitted_array = length_func(np.add(x_array, x_std_array), b1, b2, b3, c1, L0) - L1
+    min_fitted_array = length_func(np.add(x_array, -x_std_array), b1, b2, b3, c1, L0) - L1
+    yerr_fitted_array = np.array([np.add(avg_fitted_array, -max_fitted_array), np.add(min_fitted_array, -avg_fitted_array)])
+    # Theoretical cavity length with uncertainty
+    avg_cavity_array = cavity_func(avg_fitted_array, R, wavelength_hene)
+    max_cavity_array = cavity_func(max_fitted_array, R, wavelength_hene)
+    min_cavity_array = cavity_func(min_fitted_array, R, wavelength_hene)
+    yerr_cavity_array = np.array([np.add(avg_cavity_array, -max_cavity_array), np.add(min_cavity_array, -avg_cavity_array)])
+    # ax1.plot(x_array, avg_cavity_array, '.')
+    ax1.errorbar(x=x_array, y=avg_cavity_array, yerr=yerr_cavity_array, fmt=dot_fmt, color=dot_color, linewidth=line_width, capsize=cap_width)
+    ax1.set_title(f'Theory prediction based on fitted cavity length')
+    ax1.set_xlabel('Voltage [V]')
+    ax1.set_ylabel('$L_{qmn}$ [nm]')
+    ax1.grid(True)
+    # fig, ax2 = plt.subplots()
+    # ax0.plot(x_array, avg_fitted_array, '.')
+    ax0.errorbar(x=x_array, y=avg_fitted_array, yerr=yerr_fitted_array, fmt=dot_fmt, color=dot_color, linewidth=line_width, capsize=cap_width)
+    ax0.set_title(f'Fitted cavity length')
+    ax0.set_xlabel('Voltage [V]')
+    ax0.set_ylabel('$L_{cav}$ [nm]')
+    ax0.grid(True)
+
+    # return Pieze behaviour function
+    return lambda v: length_func(v, b1, b2, b3, c1, L0)
 
 
-def fit_calibration(voltage_array: np.ndarray, reference_transmission_array: np.ndarray) -> np.ndarray:
+def fit_calibration(voltage_array: np.ndarray, reference_transmission_array: np.ndarray, response_func: Callable[[np.ndarray], np.ndarray]) -> np.ndarray:
     wavelength_tisaph = 794  # [nm]
 
     # Initial condition
-    p0 = [270, 0, -0.00, 0.1, 0.02, -0.7]
+    p0 = [0, 0.6, 1]
 
-    def calibration_curve(voltage: np.ndarray, _b1: float, _b2: float, _b3: float, _A: float, _B: float, _C: float):
-        return _A + _B / (1 + _C * np.cos((4 * np.pi / wavelength_tisaph) * (_b1 * voltage + _b2 + _b1 * _b3 * voltage ** 2)))
-
-    def calibration_curve_exp(voltage: np.ndarray, _b1: float, _b2: float, _b3: float, _A: float, _B: float, _C: float):
-        # Q_factor = quality_factor(reflectance=_C)
-        return _A + _B / (1 + _C * np.cos((4 * np.pi / wavelength_tisaph) * (_b1 * voltage + _b2 * (np.exp(-_b3 * voltage) - 1))))
+    def calibration_curve(voltage: np.ndarray, _A: float, _R: float, L0: float):  # _B: float
+        Q_factor = quality_factor(reflectance=_R)
+        # return _A + _B / (1 + _C * np.cos((4 * np.pi / wavelength_tisaph) * (response_func(voltage))))
+        return _A + 1 / (1 + Q_factor * np.sin((2 * np.pi / wavelength_tisaph) * (L0 + response_func(voltage)))**2)
 
     # Fitting
-    popt, pcov = curve_fit(calibration_curve_exp, xdata=voltage_array, ydata=reference_transmission_array, p0=p0, maxfev=100000)
+    popt, pcov = curve_fit(calibration_curve, xdata=voltage_array, ydata=reference_transmission_array, p0=p0, maxfev=100000)
 
     # Plot deviation from theory
     fig, ax0 = plt.subplots()
-    ax0.plot(voltage_array, calibration_curve_exp(voltage_array, popt[0], popt[1], popt[2], popt[3], popt[4], popt[5]))
-    ax0.plot(voltage_array, reference_transmission_array)
+    ax0.plot(voltage_array, reference_transmission_array, color='orange')
+    ax0.plot(voltage_array, calibration_curve(voltage_array, popt[0], popt[1], popt[2]), color='b')
     ax0.set_xlabel('Voltage [V]')
     ax0.set_xlabel('Transmission [a.u.]')
     return popt
@@ -219,31 +262,16 @@ if __name__ == '__main__':
     from src.peak_identifier import identify_peaks
     from src.peak_relation import LabeledPeakCollection
     file_samp = 'samples_1s_10V_rate1300000.0'
-    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000'
+    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010'  # 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration5'  #
     filename_base = 'transrefl_tisaph_1s_10V_PMT4_rate1300000.0'
 
     data_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
 
-    fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0])
-    print(fit_variables)
-    # fit_collection()
-    plt.show()
+    piezo_response = fit_collection()
+    fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
+    print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')
+    print(f'Cavity length delta between HeNe and TiSaph measurement: {fit_variables[2]} [nm]')
 
-    # data_array = import_npy(filename_base)[0]
-    # sample = import_npy(file_samp)
-    # # Test length to transmission function
-    # w = 794
-    # max_len = 5*w
-    # map_func = length_to_transmission(angle=0., n_refractive=1, wavelength=w, reflectance=.5)
-    # map_piezo = voltage_to_length(a=100., b=50, c=300)
-    #
-    # x = np.linspace(0, max_len, 10000)
-    # p = np.linspace(0, 10, 10000)
-    # distance = 7.25*w - np.fromiter(map(map_piezo, p), dtype=np.float)
-    # y = np.fromiter(map(map_func, distance), dtype=np.float)
-    # q = distance / max_len
-    # plt.plot(p, y)
-    # plt.plot(p, q)
-    # plt.plot(sample, data_array)
-    # plt.show()
+    # plt.tight_layout(pad=1)
+    plt.show()
