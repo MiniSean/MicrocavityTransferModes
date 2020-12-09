@@ -41,7 +41,7 @@ def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollect
     # Plot peaks
     x = [peak.get_x for peak in data]
     y = [peak.get_y for peak in data]
-    axis.plot(x, y, 'o', label=label)
+    axis.plot(x, y, 'x', label=label)
     return get_standard_axis(axis=axis)
 
 
