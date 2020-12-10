@@ -1,7 +1,7 @@
 import os
 import numpy as np
 # import logging
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Callable
 DATA_DIR = 'data/Trans/20201125'
 
 
@@ -16,6 +16,8 @@ class SyncMeasData:
     def __init__(self, meas_file: str, samp_file: str, scan_file: Optional[str]):
         self.data_array = import_npy(meas_file)[0]  # Contains both transmitted as reflected data
         self.samp_array = import_npy(samp_file)
+        # Voltage to nm conversion
+        self._voltage_to_nm_func = non_implemented_function
         # Sort data and sample array
         self.samp_array, [self.data_array] = SyncMeasData.sort_arrays(leading=self.samp_array, follow=[self.data_array])
         self._slicer_bounds = (0, min(len(self.y_boundless_data), len(self.x_boundless_data)))  # For clamping
@@ -33,7 +35,10 @@ class SyncMeasData:
         return self.data_array
 
     def get_sample_data(self) -> np.ndarray:
-        return self.samp_array
+        try:
+            return self._voltage_to_nm_func(self.samp_array)
+        except NotImplementedError:
+            return self.samp_array
 
     def get_sliced_transmitted_data(self) -> np.ndarray:
         return self.get_sliced_array(self.get_transmitted_data())
@@ -51,6 +56,9 @@ class SyncMeasData:
             self._slicer = (self._slicer[1], self._slicer[0])
         # Clamp slicer
         self._slicer = (max(self._slicer_bounds[0], self._slicer[0]), min(self._slicer_bounds[1], self._slicer[1]))
+
+    def set_voltage_conversion(self, conversion_function: Callable[[np.ndarray], np.ndarray]):
+        self._voltage_to_nm_func = conversion_function
 
     # Properties
     y_boundless_data = property(get_transmitted_data)  # Boundless data only for peak reference
@@ -80,4 +88,8 @@ def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
         raise TypeError(f'Slice does not have correct type. Expected {type(Tuple)}, got {type(slice)}.')
     min_index = max((0, min(slice)))  # min(data_slice)
     max_index = min((len(array)-1, max(slice)))  # max(data_slice)
-    return array[min_index: max_index]
+    return array[max_index: min_index]
+
+
+def non_implemented_function(*args, **kwargs):
+    raise NotImplementedError

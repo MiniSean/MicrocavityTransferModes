@@ -14,7 +14,7 @@ def plot_class(axis: plt.axes, measurement_class: SyncMeasData):
 
 def get_standard_axis(axis: plt.axes) -> plt.axes:
     # Set axis
-    axis.set_xlabel('Sampling Voltage [V]')
+    axis.set_xlabel('Sampling Cavity Length [nm]')  # Voltage [V]
     axis.set_ylabel('Transmission [a.u.]')
     axis.set_yscale('log')
     axis.grid(True)

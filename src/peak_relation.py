@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List, Union, Tuple, Dict
 from src.import_data import SyncMeasData
+from src.sample_conversion import fit_piezo_response
 from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 
 
@@ -88,6 +89,8 @@ class LabeledPeakCollection(PeakCollection):
         self._mode_clusters = self._set_labeled_peaks(optical_mode_collection)  # Single calculation for performance
         super().__init__(flatten_clusters(data=self._mode_clusters))
         self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
+        # Set voltage conversion function
+        self._get_data_class.set_voltage_conversion(conversion_function=fit_piezo_response(mode_collection=self, sample_wavelength=633))
 
     def _set_labeled_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
@@ -258,11 +261,11 @@ if __name__ == '__main__':
     # measurement_class2.slicer = data_slice
 
     # Collect peaks
-    peak_collection_itt0 = LabeledPeakCollection(identify_peaks(measurement_class))
-    print(len(peak_collection_itt0))
-    # peak_collection_itt1 = LabeledPeakCollection(identify_peaks(measurement_class2))
-    # Get correlation offset
-    # offset_info = get_cluster_offset(peak_collection_itt0, peak_collection_itt1)
+    labeled_collection = LabeledPeakCollection(identify_peaks(measurement_class))
+    print(len(labeled_collection))
+    # Set voltage conversion function
+    voltage_response_func = fit_piezo_response(mode_collection=labeled_collection, sample_wavelength=633)
+    measurement_class.set_voltage_conversion(conversion_function=voltage_response_func)
 
     # Plot measurement
     ax = plot_class(axis=ax, measurement_class=measurement_class)
@@ -271,10 +274,10 @@ if __name__ == '__main__':
     # Plot peak collection
     # ax = plot_peak_collection(axis=ax, data=peak_collection_itt0)  # All peaks
 
-    cluster_array, value_slice = peak_collection_itt0.get_mode_sequence(long_mode=0)
+    cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=0)
     data_slice = get_value_to_data_slice(measurement_class, value_slice)
 
-    ax = plot_peak_collection(axis=ax, data=flatten_clusters(data=peak_collection_itt0.get_clusters))
+    ax = plot_peak_collection(axis=ax, data=flatten_clusters(data=labeled_collection.get_clusters))
 
     ax.axvline(x=value_slice[0], color='r', alpha=1)
     ax.axvline(x=value_slice[1], color='g', alpha=1)
@@ -284,7 +287,7 @@ if __name__ == '__main__':
     for cluster in cluster_array:
         ax2 = plot_peak_collection(axis=ax2, data=cluster)
 
-    ax = plot_specific_peaks(axis=ax, data=peak_collection_itt0, long_mode=None, trans_mode=0)
+    ax = plot_specific_peaks(axis=ax, data=labeled_collection, long_mode=None, trans_mode=0)
 
     # Draw noise h-lines
     noise_ceiling = identify_noise_ceiling(measurement_class)
