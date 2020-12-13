@@ -44,15 +44,22 @@ def quality_factor(reflectance: float) -> float:
 def voltage_to_length(a: float, b: float, c: float, initial_length: float) -> Callable[[np.ndarray], np.ndarray]:
     """
     Third-order polynomial describing the piezo-electric displacement depending on voltage.
-    With an initial cavity length the corrected cavity length is calculated
+    With an initial cavity length the corrected cavity length is calculated.
     :param a: Third-order weight [nm / V^3]
     :param b: Second-order weight [nm / V^2]
     :param c: First-order weight [nm / V]
+
+    Linear with exponential 'start-up' term.
+    :param a: Exponential weight [1 / V]
+    :param b: Voltage correction constant [V]
+    :param c: First-order weight [nm / V]
+
     :param initial_length: Initial cavity length [nm]
     :return: Total cavity length [nm]
     """
     def map_function(v: np.ndarray) -> np.ndarray:
-        return initial_length - (a * v**3 + b * v**2 + c * v)
+        # return initial_length - (a * v**3 + b * v**2 + c * v)
+        return initial_length - (v * c) * (1 - np.exp(-(v-b) * a))
     return map_function
 
 
@@ -77,9 +84,15 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     :return: Callable function that maps non-lineair voltage sample [V] to linear cavity length [nm]
     """
     # Initial condition
-    a = -0.5
-    b = 13
-    c = 200
+    # Polynomial parameters
+    # a = -0.5
+    # b = 13
+    # c = 200
+    # Exponential parameters
+    a = 0.15
+    b = 7.2
+    c = 310
+
     R = 2.7e4  # radius of curvature
     L0 = 3900
     L1 = 600
@@ -104,7 +117,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     a, b, c, R, L0, L1 = popt
 
     # # Temp
-    # print(popt)
+    print(popt)
     # a, b, c, R, L0, L1 = popt
     # print(f'Estimation parameters:')
     # print(f'Curvature R: {R} [nm]')
