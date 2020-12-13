@@ -3,7 +3,7 @@ from scipy.optimize import curve_fit
 import logging
 from typing import Callable, Any, Iterator, List, Union
 import matplotlib.pyplot as plt
-from src.peak_relation import LabeledPeakCollection
+from src.peak_relation import LabeledPeakCluster
 
 
 # Laser-optics transformations
@@ -69,10 +69,10 @@ def length_mode_consistency(cavity_radius: float, wavelength: float) -> Callable
     return map_function
 
 
-def fit_piezo_response(mode_collection: LabeledPeakCollection, sample_wavelength: float) -> Callable[[np.ndarray], np.ndarray]:
+def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wavelength: float) -> Callable[[np.ndarray], np.ndarray]:
     """
     Attempts to fit a piezo-voltage to cavity-length response function based on the theoretical relations between the detected modes.
-    :param mode_collection: Collection with labled modes (q and m+n labels)
+    :param cluster_collection: Collection with labled modes (q and m+n labels)
     :param sample_wavelength: Expected resonating light wavelength
     :return: Callable function that maps non-lineair voltage sample [V] to linear cavity length [nm]
     """
@@ -87,9 +87,9 @@ def fit_piezo_response(mode_collection: LabeledPeakCollection, sample_wavelength
 
     # Mode samples
     q_offset = 4
-    x_array = np.asarray([mode.get_avg_x for mode in mode_collection.get_clusters])
-    q = np.asarray([mode.get_longitudinal_mode_id + q_offset for mode in mode_collection.get_clusters])
-    m = np.asarray([mode.get_transverse_mode_id for mode in mode_collection.get_clusters])
+    x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
+    q = np.asarray([mode.get_longitudinal_mode_id + q_offset for mode in cluster_collection])
+    m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
 
     # Fit function
     def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _radius: float, _L0: float, _L1: float):
@@ -99,8 +99,9 @@ def fit_piezo_response(mode_collection: LabeledPeakCollection, sample_wavelength
         return length - theory_length - _L1
 
     # Fitting
-    logging.info(f'Start voltage to nm conversion fitting (using q = q* + {q_offset})')
+    logging.warning(f'Start voltage to nm conversion fitting (using q* = q - {q_offset})')
     popt, pcov = curve_fit(fit_func, xdata=x_array, ydata=np.zeros(len(x_array)), p0=p0, maxfev=100000)
+    a, b, c, R, L0, L1 = popt
 
     # # Temp
     # print(popt)
@@ -110,19 +111,19 @@ def fit_piezo_response(mode_collection: LabeledPeakCollection, sample_wavelength
     # print(f'Cavity initial length: {L0} [nm]')
 
     # Plot
-    voltage_map = voltage_to_length(a=a, b=b, c=c, initial_length=L0)
-    cavity_map = length_mode_consistency(cavity_radius=R, wavelength=sample_wavelength)
-    plot_response_mapping(mode_collection=mode_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, R, L0, L1), length_map=lambda v: voltage_map(v) - L1, cavity_map=lambda d: cavity_map(d, q, m))
+    voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v) - L1
+    cavity_map = lambda d: length_mode_consistency(cavity_radius=R, wavelength=sample_wavelength)(d, q, m)
+    plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, R, L0, L1), length_map=voltage_map, cavity_map=cavity_map)
 
     # return Piezo behaviour function
-    logging.info(f'Finished conversion fitting')
+    logging.warning(f'Finished conversion fitting')
     return voltage_map
 
 
-def plot_response_mapping(mode_collection: LabeledPeakCollection, q_offset: int, fit_function: Callable[[np.ndarray], np.ndarray], length_map: Callable[[np.ndarray], np.ndarray], cavity_map: Callable[[np.ndarray], np.ndarray]):
+def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset: int, fit_function: Callable[[np.ndarray], np.ndarray], length_map: Callable[[np.ndarray], np.ndarray], cavity_map: Callable[[np.ndarray], np.ndarray]):
     # Mode samples
-    x_array = np.asarray([mode.get_avg_x for mode in mode_collection.get_clusters])
-    x_std_array = np.asarray([mode.get_std_x for mode in mode_collection.get_clusters])
+    x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
+    x_std_array = np.asarray([mode.get_std_x for mode in cluster_collection])
     # Plot settings
     dot_fmt = '.'
     dot_color = 'b'
@@ -201,7 +202,7 @@ if __name__ == '__main__':
     data_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
 
-    piezo_response = fit_piezo_response(mode_collection=collection_class, sample_wavelength=633)
+    piezo_response = fit_piezo_response(cluster_collection=collection_class, sample_wavelength=633)
     # piezo_response = fit_collection()
     fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
     print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')

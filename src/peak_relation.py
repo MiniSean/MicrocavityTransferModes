@@ -1,8 +1,8 @@
 import numpy as np
 from typing import List, Union, Tuple, Dict
 from src.import_data import SyncMeasData
-from src.sample_conversion import fit_piezo_response
 from src.peak_identifier import PeakCollection, PeakData, identify_peaks
+SAMPLE_WAVELENGTH = 633
 
 
 class LabeledPeak(PeakData):
@@ -86,15 +86,14 @@ class LabeledPeakCluster(PeakCluster):
 
 class LabeledPeakCollection(PeakCollection):
     def __init__(self, optical_mode_collection: PeakCollection):
-        self._mode_clusters = self._set_labeled_peaks(optical_mode_collection)  # Single calculation for performance
+        self._mode_clusters = self._set_labeled_peaks(optical_mode_collection)  # Pre sample conversion
         super().__init__(flatten_clusters(data=self._mode_clusters))
         self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
-        # Set voltage conversion function
-        self._get_data_class.set_voltage_conversion(conversion_function=fit_piezo_response(mode_collection=self, sample_wavelength=633))
 
     def _set_labeled_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
-        mode_clusters = sorted(mode_clusters, key=lambda x: -x.get_avg_x)  # Sort clusters from small to large cavity
+        sort_key = mode_clusters[0][0]._data.sort_key  # Small-to-Large [nm] or Large-to-Small [V]
+        mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
         mode_clusters_height_sorted = sorted(mode_clusters, key=lambda x: -x.get_avg_y)
         height_detection_limit = mode_clusters_height_sorted[0].get_avg_y * 0.3  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
@@ -188,7 +187,9 @@ class LabeledPeakCollection(PeakCollection):
         distances = [cluster_data[i + 1] - cluster_data[i] for i in range(len(cluster_data) - 1)]
         mean = np.mean(distances)
         std = np.std(distances)
-        cut_off = 0.03  # mean + .3 * std  # TODO: Hardcoded cluster separation
+        # print(max(distances) - min(distances))  # 0.2497
+        # print(.24 * (mean + 2 * std))  # 0.0409
+        cut_off = 0.24 * (mean + 2 * std)  # 0.03  # mean + .3 * std  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
         outliers = [i for i, distance in enumerate(distances) if
                     abs(distance) > cut_off]
@@ -198,7 +199,7 @@ class LabeledPeakCollection(PeakCollection):
 
     @property
     def _get_data_class(self) -> SyncMeasData:
-        return self._list[0]._data
+        return self._mode_clusters[0][0]._data
 
     @property
     def get_clusters(self) -> List[LabeledPeakCluster]:
@@ -251,11 +252,12 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class
     from src.peak_identifier import identify_noise_ceiling
+    from src.sample_conversion import fit_piezo_response
 
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000')
-    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000')
-    # Optional, define data_slice
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010')
+    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010')
+    #     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
     # measurement_class.slicer = data_slice  # Zooms in on relevant data part
     # measurement_class2.slicer = data_slice
@@ -264,8 +266,10 @@ if __name__ == '__main__':
     labeled_collection = LabeledPeakCollection(identify_peaks(measurement_class))
     print(len(labeled_collection))
     # Set voltage conversion function
-    voltage_response_func = fit_piezo_response(mode_collection=labeled_collection, sample_wavelength=633)
+    voltage_response_func = fit_piezo_response(cluster_collection=labeled_collection.get_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
     measurement_class.set_voltage_conversion(conversion_function=voltage_response_func)
+    # Re-identify labels
+    labeled_collection = LabeledPeakCollection(identify_peaks(measurement_class))
 
     # Plot measurement
     ax = plot_class(axis=ax, measurement_class=measurement_class)
@@ -284,6 +288,7 @@ if __name__ == '__main__':
 
     measurement_class.slicer = data_slice
     ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
+    # cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=4, trans_mode=2)
     for cluster in cluster_array:
         ax2 = plot_peak_collection(axis=ax2, data=cluster)
 
