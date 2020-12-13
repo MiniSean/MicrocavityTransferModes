@@ -217,6 +217,15 @@ class LabeledPeakCollection(PeakCollection):
         return [peak_cluster.get_avg_y for peak_cluster in self.get_clusters]
 
 
+def get_converted_measurement_data(meas_class: SyncMeasData) -> SyncMeasData:
+    from src.sample_conversion import fit_piezo_response
+    initial_labeling = LabeledPeakCollection(identify_peaks(meas_class))
+    # Set voltage conversion function
+    response_func = fit_piezo_response(cluster_collection=initial_labeling.get_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
+    meas_class.set_voltage_conversion(conversion_function=response_func)
+    return meas_class
+
+
 def get_cluster_offset(base_observer: LabeledPeakCollection, target_observer: LabeledPeakCollection) -> float:
     cluster_mean_base = base_observer.get_clusters_avg_x
     cluster_mean_target = target_observer.get_clusters_avg_x
@@ -252,7 +261,6 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class
     from src.peak_identifier import identify_noise_ceiling
-    from src.sample_conversion import fit_piezo_response
 
     # Construct measurement class
     ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010')
@@ -263,13 +271,8 @@ if __name__ == '__main__':
     # measurement_class2.slicer = data_slice
 
     # Collect peaks
-    labeled_collection = LabeledPeakCollection(identify_peaks(measurement_class))
+    labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=get_converted_measurement_data(meas_class=measurement_class)))
     print(len(labeled_collection))
-    # Set voltage conversion function
-    voltage_response_func = fit_piezo_response(cluster_collection=labeled_collection.get_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
-    measurement_class.set_voltage_conversion(conversion_function=voltage_response_func)
-    # Re-identify labels
-    labeled_collection = LabeledPeakCollection(identify_peaks(measurement_class))
 
     # Plot measurement
     ax = plot_class(axis=ax, measurement_class=measurement_class)

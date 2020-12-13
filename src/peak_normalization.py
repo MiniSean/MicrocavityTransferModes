@@ -53,8 +53,8 @@ class NormalizedPeakCollection(LabeledPeakCollection):
         min_value = min(x_array)
         rel_max_value = max(x_array) - min_value
         x_array = (x_array - min_value) / rel_max_value  # Normalize array
-        y_array = np.asarray([y for _, y in sorted(zip(x_array, y_array), key=lambda pair: -pair[0])])  # Sort array
-        x_array = np.asarray(sorted(x_array, key=lambda x: x))  # Sort array
+        y_array = np.asarray([y for _, y in sorted(zip(x_array, y_array), key=lambda pair: self._get_data_class.sort_key(pair[0]))])  # Sort array
+        # x_array = np.asarray(sorted(x_array, key=lambda x: x))  # Sort array
         return x_array, y_array
 
 
@@ -62,16 +62,17 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot
     from src.peak_identifier import identify_peaks
+    from src.peak_relation import get_converted_measurement_data
     # Construct measurement class
     ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000')
     # Normalized peak collection
-    norm_peak_collection = NormalizedPeakCollection(identify_peaks(measurement_class))
+    norm_peak_collection = NormalizedPeakCollection(identify_peaks(get_converted_measurement_data(measurement_class)))
 
     # Test plot
     def peak_inclusion(peak: NormalizedPeak) -> bool:
         return peak.get_norm_x is not None and 0 <= peak.get_norm_x <= 1
-    alpha = 1
-    nr_sequences = 1
+    alpha = .5
+    nr_sequences = 3
     for i in range(nr_sequences):
         cluster_array, value_slice = norm_peak_collection.get_mode_sequence(long_mode=i)
         # Get normalized measurement
