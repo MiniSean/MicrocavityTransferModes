@@ -66,7 +66,7 @@ class MeasurementAnalysis:
         avg_peak_dist = np.mean(_fundamental_peak_distances)
         std_peak_dist = np.std(_fundamental_peak_distances)
         result = f'Average fundamental peak distance: \u03BB/2 = {round(avg_peak_dist, 2)} [nm] (\u03BB = {round(2 * avg_peak_dist, 2)} \u00B1 {round(2 * std_peak_dist, 2)} [nm])'
-        result += f'\nPredicted starting mode: q* = q - {round(_fundamental_only_cluster[0].get_avg_x / avg_peak_dist)}'
+        result += f'\nPredicted first resonance mode: q = {round(_fundamental_only_cluster[0].get_avg_x / avg_peak_dist)}'
         return result
 
 
