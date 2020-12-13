@@ -16,10 +16,13 @@ class SyncMeasData:
     def __init__(self, meas_file: str, samp_file: str, scan_file: Optional[str]):
         self.data_array = import_npy(meas_file)[0]  # Contains both transmitted as reflected data
         self.samp_array = import_npy(samp_file)
+        # Sample conversion dependent data
+        self._transmitted_data = self.data_array
+        self._sample_data = self.samp_array
         # Voltage to nm conversion
-        self._voltage_to_nm_func = non_implemented_function
+        self._sample_conversion_func = None
         # Sort data and sample array
-        self.samp_array, [self.data_array] = SyncMeasData.sort_arrays(leading=self.samp_array, follow=[self.data_array])
+        self.set_voltage_conversion(non_conversion_function)
         self._slicer_bounds = (0, min(len(self.y_boundless_data), len(self.x_boundless_data)))  # For clamping
         self._slicer = self._slicer_bounds
 
@@ -32,13 +35,10 @@ class SyncMeasData:
 
     # Getters
     def get_transmitted_data(self) -> np.ndarray:
-        return self.data_array
+        return self._transmitted_data
 
     def get_sample_data(self) -> np.ndarray:
-        try:
-            return self._voltage_to_nm_func(self.samp_array)
-        except NotImplementedError:
-            return self.samp_array
+        return self._sample_data
 
     def get_sliced_transmitted_data(self) -> np.ndarray:
         return self.get_sliced_array(self.get_transmitted_data())
@@ -49,6 +49,13 @@ class SyncMeasData:
     def get_slicer(self) -> Tuple[int, int]:
         return self._slicer
 
+    def get_sort_key(self) -> Callable[[float], float]:
+        """Key: Small-to-Large [nm] or Large-to-Small [V] (depending on sample conversion)"""
+        if np.sign(self.samp_array[0] - self.samp_array[-1]) == np.sign(self._sample_conversion_func(self.samp_array[0]) - self._sample_conversion_func(self.samp_array[-1])):
+            return lambda x: -x
+        else:
+            return lambda x: x
+
     # Setters
     def set_slicer(self, new_slicer: Tuple[int, int]):
         self._slicer = new_slicer
@@ -58,7 +65,10 @@ class SyncMeasData:
         self._slicer = (max(self._slicer_bounds[0], self._slicer[0]), min(self._slicer_bounds[1], self._slicer[1]))
 
     def set_voltage_conversion(self, conversion_function: Callable[[np.ndarray], np.ndarray]):
-        self._voltage_to_nm_func = conversion_function
+        self._sample_conversion_func = conversion_function
+        self._sample_data = conversion_function(self.samp_array)
+        self._transmitted_data = np.asarray([x for _, x in sorted(zip(self._sample_data, self.data_array), key=lambda pair: pair[0])])
+        self._sample_data = np.asarray(sorted(self._sample_data, key=lambda x: x))
 
     # Properties
     y_boundless_data = property(get_transmitted_data)  # Boundless data only for peak reference
@@ -67,6 +77,7 @@ class SyncMeasData:
     y_data = property(get_sliced_transmitted_data)
     x_data = property(get_sliced_sample_data)
     slicer = property(get_slicer, set_slicer)
+    sort_key = property(get_sort_key)
 
     def get_sliced_array(self, array: np.ndarray):
         try:
@@ -88,8 +99,8 @@ def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
         raise TypeError(f'Slice does not have correct type. Expected {type(Tuple)}, got {type(slice)}.')
     min_index = max((0, min(slice)))  # min(data_slice)
     max_index = min((len(array)-1, max(slice)))  # max(data_slice)
-    return array[max_index: min_index]
+    return array[min_index: max_index]
 
 
-def non_implemented_function(*args, **kwargs):
-    raise NotImplementedError
+def non_conversion_function(input: np.ndarray) -> np.ndarray:
+    return input
