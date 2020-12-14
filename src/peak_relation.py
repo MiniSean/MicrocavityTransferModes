@@ -94,12 +94,21 @@ class LabeledPeakCollection(PeakCollection):
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
         sort_key = mode_clusters[0][0]._data.sort_key  # Small-to-Large [nm] or Large-to-Small [V]
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
-        mode_clusters_height_sorted = sorted(mode_clusters, key=lambda x: -x.get_avg_y)
-        height_detection_limit = mode_clusters_height_sorted[0].get_avg_y * 0.3  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
+
+        mode_y_distances = [abs(mode_clusters[i].get_avg_y - mode_clusters[i + 1].get_std_y) for i in range(len(mode_clusters) - 1)]
+        mean = np.mean(mode_y_distances)
+        std = np.std(mode_y_distances)
+        outlier_indices = LabeledPeakCollection._get_outlier_indices(values=mode_y_distances, cut_off=0.8 * (mean + 2 * std))  # TODO: Hardcoded cut-off value for fundamental peak outliers
+
+        # mode_clusters_height_sorted = sorted(mode_clusters, key=lambda x: -x.get_avg_y)
+        # height_detection_limit = mode_clusters_height_sorted[0].get_avg_y * 0.7  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
+
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
-        for cluster in mode_clusters:
-            if np.max(cluster) >= height_detection_limit:
+        for i, cluster in enumerate(mode_clusters):
+            # if np.max(cluster) >= height_detection_limit:
+            #     ordered_clusters.append([cluster])
+            if i in outlier_indices:
                 ordered_clusters.append([cluster])
             elif len(ordered_clusters) == 0:
                 continue  # Skip junk peaks before first fundamental mode
@@ -191,11 +200,14 @@ class LabeledPeakCollection(PeakCollection):
         # print(.24 * (mean + 2 * std))  # 0.0409
         cut_off = 0.24 * (mean + 2 * std)  # 0.03  # mean + .3 * std  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
-        outliers = [i for i, distance in enumerate(distances) if
-                    abs(distance) > cut_off]
+        outlier_indices = LabeledPeakCollection._get_outlier_indices(values=distances, cut_off=cut_off)
         # Construct cluster splitting
-        split_indices = (0,) + tuple(data + 1 for data in outliers) + (len(cluster_data) + 1,)
+        split_indices = (0,) + tuple(data + 1 for data in outlier_indices) + (len(cluster_data) + 1,)
         return [PeakCluster(peak_list[start: end]) for start, end in zip(split_indices, split_indices[1:])]
+
+    @staticmethod
+    def _get_outlier_indices(values: List[float], cut_off: float) -> List[int]:
+        return [i for i, value in enumerate(values) if abs(value) > cut_off]
 
     @property
     def _get_data_class(self) -> SyncMeasData:
