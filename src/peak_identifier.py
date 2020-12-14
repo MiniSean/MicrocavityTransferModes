@@ -103,7 +103,7 @@ if __name__ == '__main__':
         if i > 1000:  # safety break
             break
         if peak_data.relevant:
-            ax.plot(peak_data.get_x, peak_data.get_y, 'o', color='r', alpha=1)
+            ax.plot(peak_data.get_x, peak_data.get_y, 'x', color='r', alpha=1)
         # ax.axvline(x=peak_data.get_x, ymax=peak_data.get_y, color='r', alpha=1)
 
     # Show

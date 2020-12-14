@@ -72,7 +72,7 @@ if __name__ == '__main__':
     def peak_inclusion(peak: NormalizedPeak) -> bool:
         return peak.get_norm_x is not None and 0 <= peak.get_norm_x <= 1
     alpha = .5
-    nr_sequences = 3
+    nr_sequences = 2
     for i in range(nr_sequences):
         cluster_array, value_slice = norm_peak_collection.get_mode_sequence(long_mode=i)
         # Get normalized measurement
