@@ -92,22 +92,19 @@ class LabeledPeakCollection(PeakCollection):
 
     def _set_labeled_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
-        sort_key = mode_clusters[0][0]._data.sort_key  # Small-to-Large [nm] or Large-to-Small [V]
+        sort_key = mode_clusters[0][0]._data.sort_key  # Cluster sorting key (Small-to-Large [nm] or Large-to-Small [V])
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
 
-        mode_y_distances = [abs(mode_clusters[i].get_avg_y - mode_clusters[i + 1].get_std_y) for i in range(len(mode_clusters) - 1)]
+        mode_y_distances = [(mode_clusters[i+1].get_avg_y - mode_clusters[i].get_avg_y) for i in range(len(mode_clusters)-1)]
         mean = np.mean(mode_y_distances)
         std = np.std(mode_y_distances)
-        outlier_indices = LabeledPeakCollection._get_outlier_indices(values=mode_y_distances, cut_off=0.8 * (mean + 2 * std))  # TODO: Hardcoded cut-off value for fundamental peak outliers
-
-        # mode_clusters_height_sorted = sorted(mode_clusters, key=lambda x: -x.get_avg_y)
-        # height_detection_limit = mode_clusters_height_sorted[0].get_avg_y * 0.7  # TODO: Hardcoded. Should be: ordered_clusters[-1][-1].get_avg_y:
+        cut_off = (mean + 0.5 * std)
+        # TODO: Hardcoded cut-off value for fundamental peak outliers
+        outlier_indices = [i+1 for i, value in enumerate(mode_y_distances) if value > cut_off]
 
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
         for i, cluster in enumerate(mode_clusters):
-            # if np.max(cluster) >= height_detection_limit:
-            #     ordered_clusters.append([cluster])
             if i in outlier_indices:
                 ordered_clusters.append([cluster])
             elif len(ordered_clusters) == 0:
