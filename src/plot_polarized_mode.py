@@ -7,7 +7,7 @@ from typing import List, Union
 from src.plot_npy import get_standard_axis, plot_class, plot_peak_collection, plot_cluster_collection
 from src.import_data import SyncMeasData
 from src.peak_identifier import identify_peaks
-from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, flatten_clusters, get_slice_range
+from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, flatten_clusters, get_slice_range, get_converted_measurement_data
 
 
 def plot_isolated_long_mode(axis: plt.axes, data_class: SyncMeasData, collection: LabeledPeakCollection, long_mode: int, trans_mode: Union[int, None]) -> plt.axis:
@@ -26,6 +26,10 @@ def plot_isolated_long_mode(axis: plt.axes, data_class: SyncMeasData, collection
     # # Plot peak array
     # axis = plot_peak_collection(axis=axis, data=flatten_clusters(data=cluster_array))
     return get_standard_axis(axis=axis)
+
+
+def whole_integer_divider(num: int, div: int) -> List[int]:
+    return [num // div + (1 if x < num % div else 0) for x in range(div)]
 
 
 def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mode: Union[int, None]) -> plt.axis:
@@ -51,9 +55,6 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
         data_slices.append(data_slice)
         data_slices_range.append(get_slice_range(data_slice))  # Store range
 
-    def whole_integer_divider(num: int, div: int) -> List[int]:
-        return [num // div + (1 if x < num % div else 0) for x in range (div)]
-
     # Prepare plot data
     leading_index = data_slices_range.index(max(data_slices_range))
     leading_slice = data_slices[leading_index]
@@ -63,7 +64,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
         data_slices[i] = (slice[0] - padding[0], slice[1] + padding[1])
 
     sliced_xs = data_classes[leading_index].x_boundless_data[leading_slice[0]: leading_slice[1]]
-    xs = np.arange(get_slice_range(leading_slice))  # sliced_xs #
+    xs = np.arange(get_slice_range(leading_slice))  # sliced_xs  #
     zs = np.arange(len(data_slices))
     verts = []
     peaks = []
@@ -101,7 +102,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
             # Insert 0 bound values
             yc.insert(0, 0)
             yc.append(0)
-            xc.append(int(np.mean([peak.get_relative_index for peak in cross_section])))
+            xc.append(int(np.mean([peak.get_relative_index for peak in cross_section])))  # np.mean([peak.get_x for peak in cross_section]))  #
             peak_verts.append(list(zip(zc, yc)))
 
             poly = PolyCollection([list(zip(zc, yc))])  # peak_verts
@@ -116,7 +117,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
     else:
         logging.warning(f'Cross section (peak) count is not consistent')
 
-    axis.set_xlabel('Sliced Measurement index [a.u.]')
+    axis.set_xlabel('Relative cavity length [nm]')
     axis.set_xlim3d(0, len(xs))
     # axis.set_xticks(xs)
     axis.set_ylabel('Polarisation [10 Degree]')  # 'Measurement iterations')
@@ -139,7 +140,7 @@ if __name__ == '__main__':
     # filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'.format(i) for i in range(10)]
     filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0_pol{:0=2d}0'.format(i) for i in range(19)]
 
-    meas_iterations = [SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None) for file_meas in filenames]
+    meas_iterations = [get_converted_measurement_data(SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)) for file_meas in filenames]
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
     labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
 
@@ -151,6 +152,7 @@ if __name__ == '__main__':
         long_mode = 0
 
         ax_full, measurement_class = prepare_measurement_plot(filenames[index])
+        measurement_class = get_converted_measurement_data(measurement_class)
         ax_full = plot_class(axis=ax_full, measurement_class=measurement_class)
 
         fig, ax_array = plt.subplots(3, 3)
