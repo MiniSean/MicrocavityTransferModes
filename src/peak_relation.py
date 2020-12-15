@@ -272,16 +272,22 @@ if __name__ == '__main__':
     from src.plot_npy import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class
     from src.peak_identifier import identify_noise_ceiling
 
+    # # Temp
+    # from src.structural_analysis import MeasurementAnalysis
+    # analysis = MeasurementAnalysis(meas_file='transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000', samp_file='samples_0_3s_10V_rate1300000.0', scan_file=None)
+    # print(analysis)
+
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010')
-    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol080')
+    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000')
     #     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
     # measurement_class.slicer = data_slice  # Zooms in on relevant data part
     # measurement_class2.slicer = data_slice
 
     # Collect peaks
-    labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=get_converted_measurement_data(meas_class=measurement_class)))
+    measurement_class = get_converted_measurement_data(meas_class=measurement_class)
+    labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
     print(len(labeled_collection))
 
     # Plot measurement
@@ -301,7 +307,7 @@ if __name__ == '__main__':
 
     measurement_class.slicer = data_slice
     ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
-    # cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=4, trans_mode=2)
+    # cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=0, trans_mode=1)
     for cluster in cluster_array:
         ax2 = plot_peak_collection(axis=ax2, data=cluster)
 

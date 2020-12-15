@@ -71,10 +71,11 @@ class MeasurementAnalysis:
 
 
 if __name__ == '__main__':
-
+    import matplotlib.pyplot as plt
     # File names
-    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000'
+    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010'
     file_samp = 'samples_1s_10V_rate1300000.0'
     # Analysis object
     analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, scan_file=None)
     print(analysis_obj)
+    plt.show()

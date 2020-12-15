@@ -68,7 +68,7 @@ def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
 def identify_noise_ceiling(meas_data: SyncMeasData) -> float:
     mean = np.mean(meas_data.y_boundless_data)
     std = np.std(meas_data.y_boundless_data)
-    return .003  #mean + .24 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
+    return .002  #mean + .24 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
 
 
 def identify_peak_prominence(meas_data: SyncMeasData) -> Tuple[np.ndarray, np.ndarray]:
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.plot_npy import prepare_measurement_plot, plot_class
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT5_rate1300000.0_pol000')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000')
     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
     # measurement_class.slicer = data_slice  # Zooms in on relevant data part

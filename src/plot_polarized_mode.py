@@ -134,11 +134,11 @@ if __name__ == '__main__':
     from src.plot_npy import prepare_measurement_plot
 
     # Reference files
-    file_samp = 'samples_1s_10V_rate1300000.0'
+    file_samp = 'samples_0_3s_10V_rate1300000.0'  # 'samples_1s_10V_rate1300000.0'
 
     # Measurement files
     # filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'.format(i) for i in range(10)]
-    filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0_pol{:0=2d}0'.format(i) for i in range(19)]
+    filenames = ['transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol{:0=2d}0'.format(i) for i in range(19)]
 
     meas_iterations = [get_converted_measurement_data(SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)) for file_meas in filenames]
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]

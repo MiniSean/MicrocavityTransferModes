@@ -117,7 +117,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     a, b, c, R, L0, L1 = popt
 
     # # Temp
-    print(popt)
+    # print(popt)
     # a, b, c, R, L0, L1 = popt
     # print(f'Estimation parameters:')
     # print(f'Curvature R: {R} [nm]')
@@ -125,8 +125,8 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
 
     # Plot
     voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v) - L1
-    cavity_map = lambda d: length_mode_consistency(cavity_radius=R, wavelength=sample_wavelength)(d, q, m)
-    plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, R, L0, L1), length_map=voltage_map, cavity_map=cavity_map)
+    # cavity_map = lambda d: length_mode_consistency(cavity_radius=R, wavelength=sample_wavelength)(d, q, m)
+    # plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, R, L0, L1), length_map=voltage_map, cavity_map=cavity_map)
 
     # return Piezo behaviour function
     logging.warning(f'Finished conversion fitting')

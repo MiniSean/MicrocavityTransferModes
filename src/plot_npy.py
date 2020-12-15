@@ -61,7 +61,7 @@ def prepare_measurement_plot(measure_file: str = 'transrefl_hene_1s_10V_PMT5_rat
     rcParams['agg.path.chunksize'] = 1000
     # Define file name to retrieve from predefined data path
     file_meas = measure_file
-    file_samp = 'samples_1s_10V_rate1300000.0'
+    file_samp = 'samples_0_3s_10V_rate1300000.0'
     # Store plot figure and axis
     _, result_axis = plt.subplots()
     # Construct measurement class

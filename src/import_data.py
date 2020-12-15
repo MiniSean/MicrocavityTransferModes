@@ -2,7 +2,7 @@ import os
 import numpy as np
 # import logging
 from typing import Tuple, Optional, List, Callable
-DATA_DIR = 'data/Trans/20201125'
+DATA_DIR = 'data/Trans/20201214'
 
 
 # Synchronized measurement data
