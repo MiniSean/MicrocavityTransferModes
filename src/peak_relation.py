@@ -65,7 +65,7 @@ class PeakCluster:
     @property
     def get_value_slice(self) -> Tuple[float, float]:
         """Returns standard deviation data point x-location in cluster."""
-        margin = .005
+        margin = 0.5 * self.get_std_x
         return min([peak.get_x for peak in self._list]) - margin, max([peak.get_x for peak in self._list]) + margin  # np.std([peak.get_x for peak in self._list])
 
 
@@ -95,12 +95,13 @@ class LabeledPeakCollection(PeakCollection):
         sort_key = mode_clusters[0][0]._data.sort_key  # Cluster sorting key (Small-to-Large [nm] or Large-to-Small [V])
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
 
-        mode_y_distances = [(mode_clusters[i+1].get_avg_y - mode_clusters[i].get_avg_y) for i in range(len(mode_clusters)-1)]
+        # Use first and second order difference to handle transverse mode cluster overlap between two main modes
+        mode_y_distances = [(mode_clusters[i].get_avg_y - mode_clusters[i-1].get_avg_y) for i in range(len(mode_clusters)-1)]
+        mode_y_distances_2nd = [(mode_clusters[i].get_avg_y - mode_clusters[i-2].get_avg_y) for i in range(len(mode_clusters)-1)]
         mean = np.mean(mode_y_distances)
         std = np.std(mode_y_distances)
-        cut_off = (mean + 0.5 * std)
-        # TODO: Hardcoded cut-off value for fundamental peak outliers
-        outlier_indices = [i+1 for i, value in enumerate(mode_y_distances) if value > cut_off]
+        cut_off = (mean + 0.5 * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
+        outlier_indices = [i for i in range(len(mode_y_distances)) if mode_y_distances[i] > cut_off and mode_y_distances_2nd[i] > cut_off]
 
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
@@ -190,7 +191,7 @@ class LabeledPeakCollection(PeakCollection):
         """Separates data points into clusters based on their mutual distance."""
         cluster_data = [peak.get_x for peak in peak_list]
         # Calculate mutual peak distances
-        distances = [cluster_data[i + 1] - cluster_data[i] for i in range(len(cluster_data) - 1)]
+        distances = [(cluster_data[i + 1] - cluster_data[i]) for i in range(len(cluster_data) - 1)]
         mean = np.mean(distances)
         std = np.std(distances)
         # print(max(distances) - min(distances))  # 0.2497
