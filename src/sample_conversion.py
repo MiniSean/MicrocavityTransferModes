@@ -199,7 +199,7 @@ def fit_calibration(voltage_array: np.ndarray, reference_transmission_array: np.
     ax0.plot(voltage_array, reference_transmission_array, color='orange')
     ax0.plot(voltage_array, calibration_curve(voltage_array, popt[0], popt[1], popt[2]), color='b')
     ax0.set_xlabel('Voltage [V]')
-    ax0.set_xlabel('Transmission [a.u.]')
+    ax0.set_ylabel('Transmission + offset [a.u.]')
     return popt
 
 

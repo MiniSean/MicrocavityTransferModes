@@ -1,8 +1,8 @@
-from typing import Union, List
+from typing import Union, List, Tuple, Iterator
 import numpy as np
 import matplotlib.pyplot as plt
 from src.plot_npy import get_standard_axis
-from src.peak_relation import LabeledPeakCollection, get_converted_measurement_data, get_value_to_data_slice, get_slice_range
+from src.peak_relation import LabeledPeakCollection, get_converted_measurement_data, get_value_to_data_slice, get_slice_range, flatten_clusters
 from src.peak_normalization import NormalizedPeakCollection
 from src.plot_polarized_mode import plot_isolated_long_mode
 FIRST_ALPHA = 1.0
@@ -47,6 +47,29 @@ def get_matching_overlap(axis: plt.axes, collection_classes: List[NormalizedPeak
     return axis
 
 
+def get_peak_differences(collection_classes: List[NormalizedPeakCollection], long_mode: int, trans_mode: Union[int, None]) -> Iterator[Tuple[float, float]]:
+    peak_clusters = []
+    for norm_collection in collection_classes:
+        cluster_array = norm_collection.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode)
+        peak_array = flatten_clusters(cluster_array)
+        peak_clusters.append(peak_array)
+
+    max_peaks = int(np.max([len(cluster) for cluster in peak_clusters]))
+    peak_clusters = [cluster for cluster in peak_clusters if len(cluster) == max_peaks]
+    # transposed = list(map(list, zip(*peak_clusters)))
+    diff_array = []
+    # [abs(positions[i + 1] - positions[i]) for positions in transposed for i in range(len(positions) - 1)]
+    for peaks in peak_clusters:
+        differences = []
+        for i in range(len(peaks) - 1):
+            differences.append(abs(peaks[i + 1].get_x - peaks[i].get_x))
+        diff_array.append(differences)
+    diff_array = list(map(list, zip(*diff_array)))
+    mean_diff = [float(np.mean(diff_group)) for diff_group in diff_array]
+    std_diff = [float(np.std(diff_group)) for diff_group in diff_array]
+    return zip(mean_diff, std_diff)
+
+
 if __name__ == '__main__':
     from src.import_data import SyncMeasData
     from src.peak_identifier import identify_peaks
@@ -65,6 +88,9 @@ if __name__ == '__main__':
     # TEMP
     long_mode = 0
     trans_mode = 1
+    mean_std_array = get_peak_differences(collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
+    for i, (mean, std) in enumerate(mean_std_array):
+        print(f'Peak difference {i}-{i+1}: mean = {round(mean, 4)}[nm], std = {round(std, 4)}[nm]')
 
     fig, ax = plt.subplots()
     ax = get_free_overlap(axis=ax, collection_classes=labeled_peaks, long_mode=long_mode, trans_mode=trans_mode)
