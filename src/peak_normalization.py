@@ -57,6 +57,21 @@ class NormalizedPeakCollection(LabeledPeakCollection):
         # x_array = np.asarray(sorted(x_array, key=lambda x: x))  # Sort array
         return x_array, y_array
 
+    def get_normalized_mode(self, long_mode: int, trans_mode: Union[int, None]) -> Tuple[np.ndarray, np.ndarray]:
+        # Full fundamental sequence used for normalization
+        sequence_cluster_array, sequence_slice = self.get_mode_sequence(long_mode=long_mode, trans_mode=None)
+        full_x_array, full_y_array = self.get_measurement_data_slice(union_slice=sequence_slice)
+        min_value = min(full_x_array)
+        max_value = max(full_x_array)
+        rel_max_value = max_value - min_value
+        # Actual modes being displayed
+        cluster_array, value_slice = self.get_mode_sequence(long_mode=long_mode, trans_mode=trans_mode)
+        # Assumes ordered x_array
+        x_array, y_array = self.get_measurement_data_slice(union_slice=value_slice)
+        x_array = (x_array - min_value) / rel_max_value  # Normalize array
+        y_array = np.asarray([y for _, y in sorted(zip(x_array, y_array), key=lambda pair: self._get_data_class.sort_key(pair[0]))])  # Sort array
+        return x_array, y_array
+
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt

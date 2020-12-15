@@ -65,7 +65,7 @@ class PeakCluster:
     @property
     def get_value_slice(self) -> Tuple[float, float]:
         """Returns standard deviation data point x-location in cluster."""
-        margin = 0.5 * self.get_std_x
+        margin = 0.5 * self.get_std_x + 0.001 * (max(self._list[0]._data.x_boundless_data) - min(self._list[0]._data.x_boundless_data))
         return min([peak.get_x for peak in self._list]) - margin, max([peak.get_x for peak in self._list]) + margin  # np.std([peak.get_x for peak in self._list])
 
 
