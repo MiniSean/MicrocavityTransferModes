@@ -97,7 +97,7 @@ if __name__ == '__main__':
         peak_array = flatten_clusters(data=cluster_array)
         y = [peak.get_y for peak in peak_array if peak_inclusion(peak)]
         x = [peak.get_norm_x for peak in peak_array if peak_inclusion(peak)]
-        ax.plot(x, y, 'o', alpha=alpha)
+        ax.plot(x, y, 'x', alpha=alpha)
     ax.set_yscale('log')
     ax.set_title(f'Normalized sequences')
     ax.set_xlabel('Relative distance between estimated q-modes [a.u.]')
@@ -112,10 +112,10 @@ if __name__ == '__main__':
         peak_array = flatten_clusters(data=cluster_array)
         y = [peak.get_y for peak in peak_array if peak_inclusion(peak)]
         x = [peak.get_x for peak in peak_array if peak_inclusion(peak)]
-        ax2.plot(x, y, 'o', alpha=alpha)
+        ax2.plot(x, y, 'x', alpha=alpha)
     ax2.set_yscale('log')
     ax2.set_title(f'Standard sequences')
-    ax2.set_xlabel('Sampling Voltage [V]')
+    ax2.set_xlabel('Sampling Cavity Length [nm]')
 
     plt.show()
 
