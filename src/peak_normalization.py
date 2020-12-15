@@ -41,7 +41,7 @@ class NormalizedPeakCollection(LabeledPeakCollection):
         self._list = flatten_clusters(data=self._mode_clusters)  # Update internal collection with normalized data
 
     def _set_norm_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
-        cluster_array = self._set_labeled_peaks(optical_mode_collection)
+        cluster_array = self._set_labeled_clusters(optical_mode_collection)
         for i, cluster in enumerate(cluster_array):
             for j, peak in enumerate(cluster):
                 cluster[j] = NormalizedPeak(labeled_peak=peak, anchor_data=self)

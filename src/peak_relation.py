@@ -86,11 +86,11 @@ class LabeledPeakCluster(PeakCluster):
 
 class LabeledPeakCollection(PeakCollection):
     def __init__(self, optical_mode_collection: PeakCollection):
-        self._mode_clusters = self._set_labeled_peaks(optical_mode_collection)  # Pre sample conversion
+        self._mode_clusters = self._set_labeled_clusters(optical_mode_collection)  # Pre sample conversion
         super().__init__(flatten_clusters(data=self._mode_clusters))
         self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
 
-    def _set_labeled_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
+    def _set_labeled_clusters(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
         sort_key = mode_clusters[0][0]._data.sort_key  # Cluster sorting key (Small-to-Large [nm] or Large-to-Small [V])
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
