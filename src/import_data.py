@@ -13,7 +13,7 @@ class SyncMeasData:
      -sample scaling
      -background high wavelength laser scan (outside cavity stopband) to accurately determine cavity length)
     """
-    def __init__(self, meas_file: str, samp_file: str, scan_file: Optional[str]):
+    def __init__(self, meas_file: str, samp_file: str):
         self.data_array = import_npy(meas_file)[0]  # Contains both transmitted as reflected data
         self.samp_array = import_npy(samp_file)
         # Sample conversion dependent data

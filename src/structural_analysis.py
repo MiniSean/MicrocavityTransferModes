@@ -13,7 +13,7 @@ class MeasurementAnalysis:
         self._samp_file = samp_file
         self._scan_file = scan_file
         # Construct synchronized measurement object
-        self._meas_data = get_converted_measurement_data(SyncMeasData(meas_file=meas_file, samp_file=samp_file, scan_file=scan_file))
+        self._meas_data = get_converted_measurement_data(SyncMeasData(meas_file=meas_file, samp_file=samp_file))
         self._peak_collection = NormalizedPeakCollection(identify_peaks(meas_data=self._meas_data))
 
     def __str__(self):

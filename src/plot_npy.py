@@ -65,7 +65,7 @@ def prepare_measurement_plot(measure_file: str = 'transrefl_hene_1s_10V_PMT5_rat
     # Store plot figure and axis
     _, result_axis = plt.subplots()
     # Construct measurement class
-    result_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)
+    result_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp)
     return result_axis, result_class
 
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     # Optional, define data_slice
     slice = (1050000, 1150000)
     # Construct measurement class
-    measurement_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)
+    measurement_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp)
 
     # Apply axis draw/modification
     # ax = plot_npy(axis=ax, measurement_file=file_meas, sample_file=file_samp, data_slice=None)

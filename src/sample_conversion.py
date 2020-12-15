@@ -212,10 +212,10 @@ if __name__ == '__main__':
     file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010'  # 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration5'  #
     filename_base = 'transrefl_tisaph_1s_10V_PMT4_rate1300000.0'
 
-    data_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp, scan_file=None)
+    data_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp)
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
 
-    piezo_response = fit_piezo_response(cluster_collection=collection_class, sample_wavelength=633)
+    piezo_response = fit_piezo_response(cluster_collection=collection_class.get_clusters, sample_wavelength=633)
     # piezo_response = fit_collection()
     fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
     print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')
