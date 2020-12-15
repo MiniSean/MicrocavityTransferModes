@@ -10,7 +10,7 @@ from src.peak_identifier import identify_peaks
 from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, flatten_clusters, get_slice_range, get_converted_measurement_data
 
 
-def plot_isolated_long_mode(axis: plt.axes, data_class: SyncMeasData, collection: LabeledPeakCollection, long_mode: int, trans_mode: Union[int, None]) -> plt.axis:
+def plot_isolated_long_mode(axis: plt.axes, data_class: SyncMeasData, collection: LabeledPeakCollection, long_mode: int, trans_mode: Union[int, None], **kwargs) -> plt.axis:
     # Plot array
     try:
         cluster_array, value_slice = collection.get_mode_sequence(long_mode=long_mode, trans_mode=trans_mode)
@@ -20,7 +20,7 @@ def plot_isolated_long_mode(axis: plt.axes, data_class: SyncMeasData, collection
 
     data_class.slicer = get_value_to_data_slice(data_class=data_class, value_slice=value_slice)
     # Plot data (data_slice)
-    axis = plot_class(axis=axis, measurement_class=data_class)
+    axis = plot_class(axis=axis, measurement_class=data_class, **kwargs)
     # Plot cluster array
     axis = plot_cluster_collection(axis=axis, data=cluster_array)
     # # Plot peak array

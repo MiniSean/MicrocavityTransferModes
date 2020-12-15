@@ -6,9 +6,9 @@ from src.peak_identifier import PeakCollection, PeakData
 from src.peak_relation import LabeledPeakCollection, LabeledPeak, LabeledPeakCluster
 
 
-def plot_class(axis: plt.axes, measurement_class: SyncMeasData):
+def plot_class(axis: plt.axes, measurement_class: SyncMeasData, **kwargs):
     # Plot array
-    axis.plot(measurement_class.x_data, measurement_class.y_data)
+    axis.plot(measurement_class.x_data, measurement_class.y_data, **kwargs)
     return get_standard_axis(axis=axis)
 
 

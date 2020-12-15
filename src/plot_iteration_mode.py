@@ -5,20 +5,23 @@ from src.plot_npy import get_standard_axis
 from src.peak_relation import LabeledPeakCollection, get_converted_measurement_data, get_value_to_data_slice, get_slice_range
 from src.peak_normalization import NormalizedPeakCollection
 from src.plot_polarized_mode import plot_isolated_long_mode
+FIRST_ALPHA = 1.0
+SECOND_ALPHA = 0.5
 
 
 def get_free_overlap(axis: plt.axes, collection_classes: List[LabeledPeakCollection], long_mode: int, trans_mode: Union[int, None]) -> plt.axes:
+    alpha = SECOND_ALPHA
     for collection in collection_classes:
-        axis = plot_isolated_long_mode(axis=axis, data_class=collection._get_data_class, collection=collection, long_mode=long_mode, trans_mode=trans_mode)
+        axis = plot_isolated_long_mode(axis=axis, data_class=collection._get_data_class, collection=collection, long_mode=long_mode, trans_mode=trans_mode, alpha=alpha)
     return get_standard_axis(axis=axis)
 
 
 def get_focused_overlap(axis: plt.axes, collection_classes: List[NormalizedPeakCollection], long_mode: int, trans_mode: Union[int, None]) -> plt.axes:
-    alpha = 1
+    alpha = FIRST_ALPHA
     for norm_collection in collection_classes:
         x_sample, y_measure = norm_collection.get_normalized_mode(long_mode=long_mode, trans_mode=trans_mode)
         axis.plot(x_sample, y_measure, alpha=alpha)
-        alpha = 0.3
+        alpha = SECOND_ALPHA
     # Set axis
     axis = get_standard_axis(axis=axis)
     axis.set_xlabel('Relative distance between estimated q-modes [a.u.]')  # 'Normalized units [a.u.]')
@@ -32,12 +35,12 @@ def get_matching_overlap(axis: plt.axes, collection_classes: List[NormalizedPeak
         return _norm_pos
 
     reference_norm_pos = get_normalized_cluster_pos(collection=collection_classes[0])
-    alpha = 1
+    alpha = FIRST_ALPHA
     for norm_collection in collection_classes:
         x_sample, y_measure = norm_collection.get_normalized_mode(long_mode=long_mode, trans_mode=trans_mode)
         x_diff = reference_norm_pos - get_normalized_cluster_pos(collection=norm_collection)
         axis.plot(x_sample + x_diff, y_measure, alpha=alpha)
-        alpha = 0.3
+        alpha = SECOND_ALPHA
     # Set axis
     axis = get_standard_axis(axis=axis)
     axis.set_xlabel('Normalized reference units [a.u.]')
