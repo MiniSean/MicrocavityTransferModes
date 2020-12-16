@@ -24,7 +24,7 @@ def get_focused_overlap(axis: plt.axes, collection_classes: List[NormalizedPeakC
         alpha = SECOND_ALPHA
     # Set axis
     axis = get_standard_axis(axis=axis)
-    axis.set_xlabel('Relative distance between estimated q-modes [a.u.]')  # 'Normalized units [a.u.]')
+    axis.set_xlabel('Relative distance between estimated q-modes')  # 'Normalized units [a.u.]')
     return axis
 
 
@@ -43,7 +43,7 @@ def get_matching_overlap(axis: plt.axes, collection_classes: List[NormalizedPeak
         alpha = SECOND_ALPHA
     # Set axis
     axis = get_standard_axis(axis=axis)
-    axis.set_xlabel('Normalized reference units [a.u.]')
+    axis.set_xlabel('Relative distance between estimated q-modes')  # 'Relative units' + r'$\times 2/\lambda$'
     return axis
 
 
