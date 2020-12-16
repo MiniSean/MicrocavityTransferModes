@@ -104,21 +104,27 @@ class LabeledPeakCollection(PeakCollection):
         # mode_y_distances = [(mode_clusters[i].get_avg_y - mode_clusters[i-1].get_avg_y) for i in range(len(mode_clusters)-1)]
         # mode_y_distances_2nd = [(mode_clusters[i].get_avg_y - mode_clusters[i-2].get_avg_y) for i in range(len(mode_clusters)-1)]
 
-        mode_high_distances = [(mode_clusters[i].get_max_y - mode_clusters[i-1].get_max_y) for i in range(len(mode_clusters)-1)]
-        mode_high_distances_2nd = [(mode_clusters[i].get_max_y - mode_clusters[i-2].get_max_y) for i in range(len(mode_clusters)-1)]
+        mode_high_distances = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-1].get_max_y)) for i in range(len(mode_clusters)-1)]
+        mode_high_distances_2nd = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-2].get_max_y)) for i in range(len(mode_clusters)-1)]
 
         mean = np.mean(mode_high_distances)
         std = np.std(mode_high_distances)
-        cut_off = (mean + 0.5 * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
-        outlier_indices = [i for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] > cut_off]
+        cut_off = (mean + 0.75 * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
+        fundamental_indices = [i for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] > cut_off]
+        overlap_indices = [i-1 for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] < cut_off]
 
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
         for i, cluster in enumerate(mode_clusters):
-            if i in outlier_indices:
+            if i in fundamental_indices:  # Identify fundamental peaks
                 ordered_clusters.append([cluster])
             elif len(ordered_clusters) == 0:
                 continue  # Skip junk peaks before first fundamental mode
+            elif i in overlap_indices:  # Identify overlap transverse modes
+                if len(ordered_clusters) >= 2:
+                    ordered_clusters[-2].append(cluster)
+                else:
+                    continue
             else:
                 ordered_clusters[-1].append(cluster)
         # Iterate and label
