@@ -54,7 +54,10 @@ def get_peak_differences(collection_classes: List[NormalizedPeakCollection], lon
         peak_array = flatten_clusters(cluster_array)
         peak_clusters.append(peak_array)
 
-    max_peaks = int(np.max([len(cluster) for cluster in peak_clusters]))
+    def most_frequent(array: List[float]):
+        return max(set(array), key=array.count)
+
+    max_peaks = int(most_frequent([len(cluster) for cluster in peak_clusters]))  # Most frequently found number of peaks
     peak_clusters = [cluster for cluster in peak_clusters if len(cluster) == max_peaks]
     # transposed = list(map(list, zip(*peak_clusters)))
     diff_array = []
