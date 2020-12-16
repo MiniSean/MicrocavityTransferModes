@@ -39,7 +39,6 @@ def get_matching_overlap(axis: plt.axes, collection_classes: List[NormalizedPeak
         x_sample, y_measure = norm_collection.get_normalized_mode(long_mode=long_mode, trans_mode=trans_mode)
         x_diff = reference_norm_pos - get_normalized_cluster_pos(collection=norm_collection)
         axis.plot(x_sample + x_diff, y_measure, alpha=alpha)
-        alpha = SECOND_ALPHA
     # Set axis
     axis = get_standard_axis(axis=axis)
     axis.set_xlabel('Relative distance between estimated q-modes')  # 'Relative units' + r'$\times 2/\lambda$'
