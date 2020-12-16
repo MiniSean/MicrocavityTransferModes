@@ -74,7 +74,7 @@ def get_peak_differences(collection_classes: List[NormalizedPeakCollection], lon
 
 
 if __name__ == '__main__':
-    from src.import_data import SyncMeasData
+    from src.import_data import FileToMeasData
     from src.peak_identifier import identify_peaks
 
     # Reference files
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     # Measurement files
     filenames = [f'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration{i}_pol000' for i in range(10)]
 
-    meas_iterations = [get_converted_measurement_data(SyncMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
+    meas_iterations = [get_converted_measurement_data(FileToMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
     labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
     norm_peaks = [NormalizedPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]

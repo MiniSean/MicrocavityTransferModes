@@ -5,7 +5,7 @@ from matplotlib.collections import PolyCollection
 from mpl_toolkits.mplot3d import Axes3D
 from typing import List, Union
 from src.plot_npy import get_standard_axis, plot_class, plot_peak_collection, plot_cluster_collection
-from src.import_data import SyncMeasData
+from src.import_data import SyncMeasData, FileToMeasData
 from src.peak_identifier import identify_peaks
 from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, flatten_clusters, get_slice_range, get_converted_measurement_data
 
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     # filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'.format(i) for i in range(10)]
     filenames = ['transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol{:0=2d}0'.format(i) for i in range(19)]
 
-    meas_iterations = [get_converted_measurement_data(SyncMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
+    meas_iterations = [get_converted_measurement_data(FileToMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
     labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
 

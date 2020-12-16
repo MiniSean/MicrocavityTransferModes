@@ -205,14 +205,14 @@ def fit_calibration(voltage_array: np.ndarray, reference_transmission_array: np.
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    from src.import_data import import_npy, SyncMeasData
+    from src.import_data import import_npy, FileToMeasData
     from src.peak_identifier import identify_peaks
     from src.peak_relation import LabeledPeakCollection
     file_samp = 'samples_1s_10V_rate1300000.0'
     file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010'  # 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration5'  #
     filename_base = 'transrefl_tisaph_1s_10V_PMT4_rate1300000.0'
 
-    data_class = SyncMeasData(meas_file=file_meas, samp_file=file_samp)
+    data_class = FileToMeasData(meas_file=file_meas, samp_file=file_samp)
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
 
     piezo_response = fit_piezo_response(cluster_collection=collection_class.get_clusters, sample_wavelength=633)
