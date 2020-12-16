@@ -17,11 +17,10 @@ def get_free_overlap(axis: plt.axes, collection_classes: List[LabeledPeakCollect
 
 
 def get_focused_overlap(axis: plt.axes, collection_classes: List[NormalizedPeakCollection], long_mode: int, trans_mode: Union[int, None]) -> plt.axes:
-    alpha = FIRST_ALPHA
-    for norm_collection in collection_classes:
+    for i, norm_collection in enumerate(collection_classes):
+        alpha = SECOND_ALPHA if i == len(collection_classes) - 1 else FIRST_ALPHA
         x_sample, y_measure = norm_collection.get_normalized_mode(long_mode=long_mode, trans_mode=trans_mode)
         axis.plot(x_sample, y_measure, alpha=alpha)
-        alpha = SECOND_ALPHA
     # Set axis
     axis = get_standard_axis(axis=axis)
     axis.set_xlabel('Relative distance between estimated q-modes')  # 'Normalized units [a.u.]')
@@ -35,8 +34,8 @@ def get_matching_overlap(axis: plt.axes, collection_classes: List[NormalizedPeak
         return _norm_pos
 
     reference_norm_pos = get_normalized_cluster_pos(collection=collection_classes[0])
-    alpha = FIRST_ALPHA
-    for norm_collection in collection_classes:
+    for i, norm_collection in enumerate(collection_classes):
+        alpha = SECOND_ALPHA if i == len(collection_classes) - 1 else FIRST_ALPHA
         x_sample, y_measure = norm_collection.get_normalized_mode(long_mode=long_mode, trans_mode=trans_mode)
         x_diff = reference_norm_pos - get_normalized_cluster_pos(collection=norm_collection)
         axis.plot(x_sample + x_diff, y_measure, alpha=alpha)
