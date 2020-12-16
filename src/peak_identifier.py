@@ -60,7 +60,7 @@ class PeakCollection:
 
 def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
     peak_prominence = identify_peak_prominence(meas_data)[0]  # Average peak prominence
-    cutoff_prominence = np.mean(peak_prominence) + 0.3 * np.std(peak_prominence)  # TODO: Hardcoded peak prominence cutoff
+    cutoff_prominence = np.mean(peak_prominence) + 0.40 * np.std(peak_prominence)  # TODO: Hardcoded peak prominence cutoff
     peak_indices, properties = find_peaks(x=meas_data.y_data, prominence=cutoff_prominence, distance=10)  # Arbitrary distance value
     # , height=identify_noise_ceiling(meas_data)
     peak_collection = PeakCollection([PeakData(data=meas_data, index=i) for i in peak_indices])
