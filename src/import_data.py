@@ -97,9 +97,9 @@ class FileToMeasData(SyncMeasData):
         super().__init__(import_npy(meas_file)[0], import_npy(samp_file))
 
 
-def import_npy(filename: str) -> np.ndarray:
-    filepath = os.path.join(DATA_DIR, filename + '.npy')
-    return np.load(file=filepath, allow_pickle=False)
+def import_npy(filename: str, filepath: str = DATA_DIR) -> np.ndarray:
+    full_path = os.path.join(filepath, filename + '.npy')
+    return np.load(file=full_path, allow_pickle=False)
 
 
 def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
