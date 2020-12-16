@@ -63,6 +63,11 @@ class PeakCluster:
         return np.std([peak.get_y for peak in self._list])
 
     @property
+    def get_max_y(self) -> float:
+        """Returns the maximum y-valued peak within the cluster"""
+        return sorted(self._list, key=lambda y: y)[-1].get_y
+
+    @property
     def get_value_slice(self) -> Tuple[float, float]:
         """Returns standard deviation data point x-location in cluster."""
         margin = 0.5 * self.get_std_x + 0.001 * (max(self._list[0]._data.x_boundless_data) - min(self._list[0]._data.x_boundless_data))
@@ -96,12 +101,16 @@ class LabeledPeakCollection(PeakCollection):
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
 
         # Use first and second order difference to handle transverse mode cluster overlap between two main modes
-        mode_y_distances = [(mode_clusters[i].get_avg_y - mode_clusters[i-1].get_avg_y) for i in range(len(mode_clusters)-1)]
-        mode_y_distances_2nd = [(mode_clusters[i].get_avg_y - mode_clusters[i-2].get_avg_y) for i in range(len(mode_clusters)-1)]
-        mean = np.mean(mode_y_distances)
-        std = np.std(mode_y_distances)
+        # mode_y_distances = [(mode_clusters[i].get_avg_y - mode_clusters[i-1].get_avg_y) for i in range(len(mode_clusters)-1)]
+        # mode_y_distances_2nd = [(mode_clusters[i].get_avg_y - mode_clusters[i-2].get_avg_y) for i in range(len(mode_clusters)-1)]
+
+        mode_high_distances = [(mode_clusters[i].get_max_y - mode_clusters[i-1].get_max_y) for i in range(len(mode_clusters)-1)]
+        mode_high_distances_2nd = [(mode_clusters[i].get_max_y - mode_clusters[i-2].get_max_y) for i in range(len(mode_clusters)-1)]
+
+        mean = np.mean(mode_high_distances)
+        std = np.std(mode_high_distances)
         cut_off = (mean + 0.5 * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
-        outlier_indices = [i for i in range(len(mode_y_distances)) if mode_y_distances[i] > cut_off and mode_y_distances_2nd[i] > cut_off]
+        outlier_indices = [i for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] > cut_off]
 
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
