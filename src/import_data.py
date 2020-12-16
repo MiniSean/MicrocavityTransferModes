@@ -1,8 +1,10 @@
 import os
+import cv2
 import numpy as np
 # import logging
 from typing import Tuple, Optional, List, Callable
 DATA_DIR = 'data/Trans/20201214'
+ICAP_DIR = 'data/ICCaptures'
 
 
 # Synchronized measurement data
@@ -110,3 +112,8 @@ def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
 
 def non_conversion_function(input: np.ndarray) -> np.ndarray:
     return input
+
+
+def import_cv2(filename: str) -> cv2.VideoCapture:
+    filepath = os.path.join(ICAP_DIR, filename + '.avi')
+    return cv2.VideoCapture(filepath)
