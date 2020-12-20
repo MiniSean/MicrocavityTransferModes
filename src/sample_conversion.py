@@ -215,7 +215,8 @@ if __name__ == '__main__':
     data_class = FileToMeasData(meas_file=file_meas, samp_file=file_samp)
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
 
-    piezo_response = fit_piezo_response(cluster_collection=collection_class.get_clusters, sample_wavelength=633)
+    cluster_collection = collection_class.get_q_clusters  # collection_class.get_clusters
+    piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=633)
     # piezo_response = fit_collection()
     fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
     print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')

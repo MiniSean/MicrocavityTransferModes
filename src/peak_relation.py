@@ -254,7 +254,7 @@ def get_converted_measurement_data(meas_class: SyncMeasData) -> SyncMeasData:
     from src.sample_conversion import fit_piezo_response
     initial_labeling = LabeledPeakCollection(identify_peaks(meas_class))
     # Set voltage conversion function
-    response_func = fit_piezo_response(cluster_collection=initial_labeling.get_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
+    response_func = fit_piezo_response(cluster_collection=initial_labeling.get_q_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
     meas_class.set_voltage_conversion(conversion_function=response_func)
     return meas_class
 
