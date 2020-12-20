@@ -232,6 +232,14 @@ class LabeledPeakCollection(PeakCollection):
         return self._mode_clusters
 
     @property
+    def get_q_clusters(self) -> List[LabeledPeakCluster]:
+        """Returns a list of q (m + n = 1) clusters"""
+        result = []
+        for q_long_id, q_peak in self.q_dict.items():
+            result.append(LabeledPeakCluster(data=[q_peak], long_mode=q_long_id, trans_mode=-1))
+        return result
+
+    @property
     def get_clusters_avg_x(self) -> List[float]:
         """Returns average data point x-location in each cluster."""
         return [peak_cluster.get_avg_x for peak_cluster in self.get_clusters]
