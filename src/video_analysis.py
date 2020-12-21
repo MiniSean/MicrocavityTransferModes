@@ -44,7 +44,10 @@ def exclude_file_extension(full_path: str) -> str:
 
 
 def export_video_intensity(filename: str, update_capture_images: bool):
-    folder_name = os.path.join(ICAP_DIR, f'FrameFolder_{filename}')
+    split_directory = filename.split('\\')
+    actual_filename = split_directory[-1]
+    actual_filedir = '\\'.join(split_directory[0:-1])
+    folder_name = os.path.join(os.path.join(ICAP_DIR, actual_filedir), f'FrameFolder_{actual_filename}')
     capture = import_cv2(filename=filename)
     ret, frame = capture.read()
     max_frame_nr = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -52,7 +55,7 @@ def export_video_intensity(filename: str, update_capture_images: bool):
 
     # Ready data storage
     storage = np.zeros(max_frame_nr)
-    storage_filename = f'NumpyData_{filename}'
+    storage_filename = f'NumpyData_{actual_filename}'
 
     # Store/Retrieve video intensity information
     try:
