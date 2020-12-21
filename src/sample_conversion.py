@@ -175,7 +175,7 @@ def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset
     ax1.grid(True)
     # fig, ax2 = plt.subplots()
     # ax0.plot(x_array, avg_fitted_array, '.')
-    ax0.errorbar(x=x_array, y=avg_fitted_array, yerr=yerr_fitted_array, fmt=dot_fmt, color=dot_color, linewidth=line_width, capsize=cap_width)
+    ax0.errorbar(x=x_array, y=avg_fitted_array, yerr=yerr_fitted_array, fmt='-', color=dot_color, linewidth=line_width, capsize=cap_width)
     ax0.set_title(f'Fitted cavity length')
     ax0.set_xlabel('Voltage [V]')
     ax0.set_ylabel('$L_{cav}$ [nm]')
