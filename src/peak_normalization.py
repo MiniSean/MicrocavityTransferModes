@@ -23,11 +23,11 @@ class NormalizedPeak(LabeledPeak):
 
     @property
     def get_norm_x(self) -> Union[float, None]:
-        divider = self._anchor_point[1] - self._anchor_point[0]
+        divider = self._anchor_point[1].get_x - self._anchor_point[0].get_x
         if self._anchor_point[0] is None or self._anchor_point[1] is None or divider == 0:
             return None
         else:
-            return (self.get_x - self._anchor_point[0].get_x) / (self._anchor_point[1].get_x - self._anchor_point[0].get_x)
+            return (self.get_x - self._anchor_point[0].get_x) / divider
 
 
 # Adds additional normalization functionality to the labeled peak collection
