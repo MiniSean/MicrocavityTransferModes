@@ -61,7 +61,7 @@ class MeasurementAnalysis:
 
     @property
     def get_physical_info(self):
-        _fundamental_only_cluster = self.get_only_fundamental_clusters
+        _fundamental_only_cluster = self._peak_collection.get_q_clusters  # self.get_only_fundamental_clusters
         _fundamental_peak_distances = [abs(_fundamental_only_cluster[i].get_avg_x - _fundamental_only_cluster[i + 1].get_avg_x) for i in range(len(_fundamental_only_cluster) - 1)]
         avg_peak_dist = np.mean(_fundamental_peak_distances)
         std_peak_dist = np.std(_fundamental_peak_distances)
