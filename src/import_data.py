@@ -106,7 +106,7 @@ def slice_array(array: np.ndarray, slice: Tuple[int, int]) -> np.ndarray:
     if not isinstance(slice, Tuple) or len(slice) != 2:
         raise TypeError(f'Slice does not have correct type. Expected {type(Tuple)}, got {type(slice)}.')
     min_index = max((0, min(slice)))  # min(data_slice)
-    max_index = min((len(array)-1, max(slice)))  # max(data_slice)
+    max_index = min((len(array), max(slice)))  # max(data_slice)
     return array[min_index: max_index]
 
 
