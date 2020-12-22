@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm  # For displaying for-loop process to console
 from src.import_data import import_cv2, ICAP_DIR, SyncMeasData, import_npy
 from src.peak_identifier import identify_peak_dirty, PeakCollection
+from src.peak_relation import LabeledPeakCollection
 
 
 def export_plt(plot_obj: plt, filename: str, filepath: str) -> str:
@@ -89,6 +90,7 @@ def export_video_intensity(filename: str, update_capture_images: bool, build_vid
     # Create data object
     data_class = SyncMeasData(data_array=data_array, samp_array=np.arange(len(storage)))
     peak_collection = identify_peak_dirty(meas_data=data_class, cutoff=0.1)  # TODO: Hardcoded peak identification prominence
+    peak_collection = LabeledPeakCollection(optical_mode_collection=peak_collection)
     print(f'Number of high intensity peaks detected: {len(peak_collection)}')
     plot_peaks(plt, peak_collection)
 
@@ -114,9 +116,11 @@ def export_video_intensity(filename: str, update_capture_images: bool, build_vid
             axis.get_xaxis().set_visible(False)  # Hide tick labels
             axis.get_yaxis().set_visible(False)  # Hide tick labels
             inset_axis = add_inset_spectrum(figure=fig)
+            track_axis = add_track_spectrum(figure=fig)
             axis.imshow(frame_i)
             # Create navigation spectrum inset
             set_inset_spectrum(axis=inset_axis, data=data_array, current_index=i, peak_collection=peak_collection)
+            set_track_spectrum(axis=track_axis, data=data_array, current_index=i)
 
             # plt.show()  # Temp
             frame_name = f'frame_{str(i)}'
@@ -173,12 +177,37 @@ def add_inset_spectrum(figure: plt.Figure) -> plt.axis:
     return _axis
 
 
-def set_inset_spectrum(axis: plt.axis, data: np.ndarray, current_index: int, peak_collection: PeakCollection) -> plt.axis:
+def add_track_spectrum(figure: plt.Figure) -> plt.axis:
+    rect_transform = [0.125, 0.05, .775, .15]  # (0,0 is bottom left; 1,1 is top right)
+    _axis = figure.add_axes(rect_transform)
+    _axis.get_xaxis().set_visible(False)  # Hide tick labels
+    _axis.get_yaxis().set_visible(False)  # Hide tick labels
+    _axis.set_yscale('log')  # Set log scale
+    _axis.set_facecolor('k')  # Face color
+    return _axis
+
+
+def set_inset_spectrum(axis: plt.axis, data: np.ndarray, current_index: int, peak_collection: LabeledPeakCollection) -> plt.axis:
     axis.plot(data)  # Show intensity spectrum
     axis = plot_peaks(axis=axis, collection=peak_collection)  # Show peaks
-    axis.axvline(x=current_index, color='r')
+    text_height = 0.9  # Data coordinates
     _margin = 50
-    axis.set_xlim([max(0, current_index - _margin), min(len(data) - 1, current_index + _margin)])
+    x_lim = [max(0, current_index - _margin), min(len(data) - 1, current_index + _margin)]
+    # Plot clusters
+    for cluster in peak_collection.get_clusters:
+        bound_left, bound_right = cluster.get_value_slice
+        axis.axvspan(bound_left, bound_right, alpha=0.5, color='green')
+        if x_lim[0] < cluster.get_avg_x < x_lim[1]:
+            axis.text(x=cluster.get_avg_x, y=text_height, s=r'$\tilde{m}$'+f'={cluster.get_transverse_mode_id}')
+    axis.axvline(x=current_index, color='r')
+    axis.set_xlim(x_lim)
+    return axis
+
+
+def set_track_spectrum(axis: plt.axis, data: np.ndarray, current_index: int) -> plt.axis:
+    axis.plot(data)  # Show intensity spectrum
+    axis.axvline(x=current_index, color='r')
+    # axis.set_xlim([max(0, current_index - _margin), min(len(data) - 1, current_index + _margin)])
     # axis.set_ylim([max(0.001, np.min(data)), np.max(data)])
     return axis
 
