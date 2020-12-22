@@ -190,3 +190,7 @@ if __name__ == '__main__':
     # filename = 'pol000_exp005_gain800'
     filename = 'pol000_fps0375_gain1000_01HIGHQUALITY'
     export_video_intensity(filename=filename, update_capture_images=False, build_video=True)
+    # filename = '07-12_800sec_mode_scanning_15FPS'  # 'test_01'
+    # filename = 'pol040_exp005_gain800'
+    filename = '21-12_10micromcav\\pol000_exp005_gain800_04'
+    export_video_intensity(filename=filename, update_capture_images=False)

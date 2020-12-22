@@ -211,7 +211,7 @@ class LabeledPeakCollection(PeakCollection):
         std = np.std(distances)
         # print(max(distances) - min(distances))  # 0.2497
         # print(.24 * (mean + 2 * std))  # 0.0409
-        cut_off = mean + .1 * std  # 0.24 * (mean + 2 * std)  # TODO: Hardcoded cluster separation
+        cut_off = mean + (-.1) * std  # 0.24 * (mean + 2 * std)  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
         outlier_indices = LabeledPeakCollection._get_outlier_indices(values=distances, cut_off=cut_off)
         # Construct cluster splitting
@@ -301,7 +301,7 @@ if __name__ == '__main__':
     # print(analysis)
 
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol080')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration_pol000')
     ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000')
     #     # Optional, define data_slice
     # data_slice = (1050000, 1150000)

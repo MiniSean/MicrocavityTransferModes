@@ -138,13 +138,13 @@ if __name__ == '__main__':
 
     # Measurement files
     # filenames = ['transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'.format(i) for i in range(10)]
-    filenames = ['transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol{:0=2d}0'.format(i) for i in range(19)]
+    filenames = ['transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration1_pol{:0=2d}0'.format(i) for i in range(19)]
 
     meas_iterations = [get_converted_measurement_data(FileToMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
     labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
 
-    plot_3d_sequence(data_classes=meas_iterations, long_mode=0, trans_mode=1)
+    plot_3d_sequence(data_classes=meas_iterations, long_mode=0, trans_mode=2)
 
     def plot_cross_sections():
         # Test
