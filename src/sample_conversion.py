@@ -208,8 +208,8 @@ if __name__ == '__main__':
     from src.import_data import import_npy, FileToMeasData
     from src.peak_identifier import identify_peaks
     from src.peak_relation import LabeledPeakCollection
-    file_samp = 'samples_1s_10V_rate1300000.0'
-    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0_pol010'  # 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration5'  #
+    file_samp = 'samples_0_3s_10V_rate1300000.0'
+    file_meas = 'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol090'  # 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration5'  #
     filename_base = 'transrefl_tisaph_1s_10V_PMT4_rate1300000.0'
 
     data_class = FileToMeasData(meas_file=file_meas, samp_file=file_samp)
@@ -218,9 +218,9 @@ if __name__ == '__main__':
     cluster_collection = collection_class.get_q_clusters  # collection_class.get_clusters
     piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=633)
     # piezo_response = fit_collection()
-    fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
-    print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')
-    print(f'Cavity length delta between HeNe and TiSaph measurement: {fit_variables[2]} [nm]')
+    # fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
+    # print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')
+    # print(f'Cavity length delta between HeNe and TiSaph measurement: {fit_variables[2]} [nm]')
 
     # plt.tight_layout(pad=1)
     plt.show()
