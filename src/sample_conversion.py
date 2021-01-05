@@ -99,8 +99,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
 
     # R = 2.7e4  # radius of curvature
     L0 = 3900
-    L1 = 600
-    p0 = [a, b, c, L0, L1]
+    p0 = [a, b, c, L0]
 
     # Mode samples
     q_offset = 4
@@ -109,16 +108,16 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     # m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
 
     # Fit function
-    def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _L0: float, _L1: float):
+    def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _L0: float):
         """Return function to fit to 0: length = cavity_formula(length) + L1 (self consistency)"""
         length = voltage_to_length(a=_a, b=_b, c=_c, initial_length=_L0)(voltage_array)
         theory_length = length_mode_consistency(wavelength=sample_wavelength)(q)
-        return length - theory_length - _L1
+        return length - theory_length
 
     # Fitting
     # logging.warning(f'Start voltage to nm conversion fitting (using q* = q - {q_offset})')
     popt, pcov = curve_fit(fit_func, xdata=x_array, ydata=np.zeros(len(x_array)), p0=p0, maxfev=100000)
-    a, b, c, L0, L1 = popt
+    a, b, c, L0 = popt
 
     # # Temp
     # print(popt)
@@ -127,10 +126,11 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     print(f'Cavity initial length: {L0} [nm]')
 
     # Plot
-    voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v) - L1
+    voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v)
     # cavity_map = lambda d: length_mode_consistency(wavelength=sample_wavelength)(q)
-    # plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, L0, L1), length_map=voltage_map, cavity_map=cavity_map)
+    # plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, L0), length_map=voltage_map, cavity_map=cavity_map)
 
+    print(f'Cavity offset length (lowest q*={int(q_offset)}): {np.min(voltage_map(x_array))} [nm]')
     # return Piezo behaviour function
     # logging.warning(f'Finished conversion fitting')
     return voltage_map
