@@ -63,16 +63,20 @@ def voltage_to_length(a: float, b: float, c: float, initial_length: float) -> Ca
     return map_function
 
 
-def length_mode_consistency(cavity_radius: float, wavelength: float) -> Callable[[np.ndarray, np.ndarray, np.ndarray], np.ndarray]:
+# (cavity_radius: float, wavelength: float) -> Callable[[np.ndarray, np.ndarray, np.ndarray], np.ndarray]:
+def length_mode_consistency(wavelength: float) -> Callable[[np.ndarray], np.ndarray]:
     """
     Theoretical self-consistency function based on transmission mode (q and m+n)
     :param cavity_radius: Cavity curvature (symmetric in 2 dimensions)
     :param wavelength: Resonating wavelength [nm]
     :return: Predicted resonance length depending on mode (q and m+n)
     """
-    def map_function(d: np.ndarray, q_mode: np.ndarray, m_mode: np.ndarray) -> np.ndarray:
+    # (d: np.ndarray, q_mode: np.ndarray, m_mode: np.ndarray)
+    def map_function(q_mode: np.ndarray) -> np.ndarray:
         """Return Theoretical self-consistency"""
-        return (wavelength / 2) * (q_mode + (m_mode + 1) / np.pi * np.arcsin(np.sqrt(np.abs(d / cavity_radius))))
+        # arcsin_input = np.sqrt(np.abs(d / cavity_radius))
+        # + (m_mode + 1) / np.pi * np.arcsin(arcsin_input)
+        return (wavelength / 2) * q_mode
     return map_function
 
 
@@ -93,10 +97,10 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     b = 7.2
     c = 310
 
-    R = 2.7e4  # radius of curvature
+    # R = 2.7e4  # radius of curvature
     L0 = 3900
     L1 = 600
-    p0 = [a, b, c, R, L0, L1]
+    p0 = [a, b, c, L0, L1]
 
     # Mode samples
     q_offset = 4
@@ -105,31 +109,30 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
 
     # Fit function
-    def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _radius: float, _L0: float, _L1: float):
+    def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _L0: float, _L1: float):
         """Return function to fit to 0: length = cavity_formula(length) + L1 (self consistency)"""
         length = voltage_to_length(a=_a, b=_b, c=_c, initial_length=_L0)(voltage_array)
-        theory_length = length_mode_consistency(cavity_radius=_radius, wavelength=sample_wavelength)(length, q, m)
+        theory_length = length_mode_consistency(wavelength=sample_wavelength)(q)
         return length - theory_length - _L1
 
     # Fitting
-    logging.warning(f'Start voltage to nm conversion fitting (using q* = q - {q_offset})')
+    # logging.warning(f'Start voltage to nm conversion fitting (using q* = q - {q_offset})')
     popt, pcov = curve_fit(fit_func, xdata=x_array, ydata=np.zeros(len(x_array)), p0=p0, maxfev=100000)
-    a, b, c, R, L0, L1 = popt
+    a, b, c, L0, L1 = popt
 
     # # Temp
     # print(popt)
-    # a, b, c, R, L0, L1 = popt
+    # a, b, c, L0, L1 = popt
     # print(f'Estimation parameters:')
-    # print(f'Curvature R: {R} [nm]')
     # print(f'Cavity initial length: {L0} [nm]')
 
     # Plot
     voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v) - L1
-    # cavity_map = lambda d: length_mode_consistency(cavity_radius=R, wavelength=sample_wavelength)(d, q, m)
-    # plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, R, L0, L1), length_map=voltage_map, cavity_map=cavity_map)
+    # cavity_map = lambda d: length_mode_consistency(wavelength=sample_wavelength)(q)
+    # plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, L0, L1), length_map=voltage_map, cavity_map=cavity_map)
 
     # return Piezo behaviour function
-    logging.warning(f'Finished conversion fitting')
+    # logging.warning(f'Finished conversion fitting')
     return voltage_map
 
 
