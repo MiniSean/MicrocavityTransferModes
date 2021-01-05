@@ -211,7 +211,7 @@ class LabeledPeakCollection(PeakCollection):
         std = np.std(distances)
         # print(max(distances) - min(distances))  # 0.2497
         # print(.24 * (mean + 2 * std))  # 0.0409
-        cut_off = mean + (-.1) * std  # 0.24 * (mean + 2 * std)  # TODO: Hardcoded cluster separation
+        cut_off = mean + (.1) * std  # 0.24 * (mean + 2 * std)  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
         outlier_indices = LabeledPeakCollection._get_outlier_indices(values=distances, cut_off=cut_off)
         # Construct cluster splitting
