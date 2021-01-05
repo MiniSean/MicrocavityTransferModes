@@ -37,13 +37,19 @@ class NormalizedPeakCluster(LabeledPeakCluster):
 
     @property
     def get_norm_avg_x(self) -> float:
-        """Returns average data point x-location in cluster."""
-        return np.mean([peak.get_norm_x for peak in self._list])
+        """Returns normalized average data point x-location in cluster."""
+        try:
+            return np.mean([peak.get_norm_x for peak in self._list])
+        except AttributeError:
+            return float('nan')
 
     @property
     def get_norm_std_x(self) -> float:
-        """Returns standard deviation from data point x-location in cluster."""
-        return np.std([peak.get_norm_x for peak in self._list])
+        """Returns normalized standard deviation from data point x-location in cluster."""
+        try:
+            return np.std([peak.get_norm_x for peak in self._list])
+        except AttributeError:
+            return float('nan')
 
 
 # Adds additional normalization functionality to the labeled peak collection
@@ -88,6 +94,11 @@ class NormalizedPeakCollection(LabeledPeakCollection):
         x_array = (x_array - min_value) / rel_max_value  # Normalize array
         y_array = np.asarray([y for _, y in sorted(zip(x_array, y_array), key=lambda pair: self._get_data_class.sort_key(pair[0]))])  # Sort array
         return x_array, y_array
+
+    @property
+    def get_clusters(self) -> List[NormalizedPeakCluster]:
+        """Returns a list of pre-calculated mode clusters"""
+        return self._mode_clusters
 
 
 if __name__ == '__main__':
