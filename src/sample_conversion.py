@@ -106,7 +106,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     q_offset = 4
     x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
     q = np.asarray([mode.get_longitudinal_mode_id + q_offset for mode in cluster_collection])
-    m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
+    # m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
 
     # Fit function
     def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _L0: float, _L1: float):
@@ -124,7 +124,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     # print(popt)
     # a, b, c, L0, L1 = popt
     # print(f'Estimation parameters:')
-    # print(f'Cavity initial length: {L0} [nm]')
+    print(f'Cavity initial length: {L0} [nm]')
 
     # Plot
     voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v) - L1
