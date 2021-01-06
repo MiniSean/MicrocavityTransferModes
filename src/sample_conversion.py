@@ -59,7 +59,7 @@ def voltage_to_length(a: float, b: float, c: float, initial_length: float) -> Ca
     """
     def map_function(v: np.ndarray) -> np.ndarray:
         # return initial_length - (a * v**3 + b * v**2 + c * v)
-        return initial_length - (v * c) * (1 - np.exp(-(v-b) * a))
+        return initial_length - (v * c) * (1 - np.exp(-v * a))
     return map_function
 
 
