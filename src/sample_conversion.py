@@ -136,6 +136,9 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     return voltage_map
 
 
+fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+
+
 def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset: int, fit_function: Callable[[np.ndarray], np.ndarray], length_map: Callable[[np.ndarray], np.ndarray], cavity_map: Callable[[np.ndarray], np.ndarray]):
     # Mode samples
     x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
@@ -146,14 +149,14 @@ def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset
     line_width = 0.5
     cap_width = 1
     # Plot deviation from theory
-    fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+    # fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
     # Effective difference with uncertainty
     avg_length_array = fit_function(x_array)
     max_length_array = fit_function(np.add(x_array, x_std_array))
     min_length_array = fit_function(np.add(x_array, -x_std_array))
     yerr_length_array = np.array([np.add(avg_length_array, - max_length_array), np.add(min_length_array, -avg_length_array)])
     # Plot effective difference
-    ax2.errorbar(x=x_array, y=avg_length_array, yerr=yerr_length_array, fmt=dot_fmt, color=dot_color, linewidth=line_width, capsize=cap_width)
+    ax2.errorbar(x=x_array, y=avg_length_array, yerr=yerr_length_array, fmt=dot_fmt, linewidth=line_width, capsize=cap_width)
     ax2.set_title(f'Effective difference (q = q* + {q_offset})')
     ax2.set_xlabel('Voltage [V]')
     ax2.set_ylabel('Deviation from theory [nm]')
@@ -224,6 +227,21 @@ if __name__ == '__main__':
     # fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
     # print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')
     # print(f'Cavity length delta between HeNe and TiSaph measurement: {fit_variables[2]} [nm]')
+
+    for i in range(30):
+        _filename = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration{}'.format(i)
+        data_class = FileToMeasData(meas_file=_filename, samp_file=file_samp)
+        collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
+
+        cluster_collection = collection_class.get_q_clusters  # collection_class.get_clusters
+        piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=633)
+    # Obtain mean and root-mean-square
+    y_values = [value for line in ax2.lines for value in line.get_ydata()]
+    y_mean = np.mean(y_values)
+    y_rms = np.sqrt(np.sum((y_values - y_mean)**2) / len(y_values))
+    ax2.axhline(y=y_mean, ls='--', color='darkorange')
+    ax2.axhline(y=y_mean+y_rms, ls='--', color='orange')
+    ax2.axhline(y=y_mean-y_rms, ls='--', color='orange')
 
     # plt.tight_layout(pad=1)
     plt.show()
