@@ -190,13 +190,15 @@ def add_track_spectrum(figure: plt.Figure) -> plt.axis:
 def set_inset_spectrum(axis: plt.axis, data: np.ndarray, current_index: int, peak_collection: LabeledPeakCollection) -> plt.axis:
     axis.plot(data)  # Show intensity spectrum
     axis = plot_peaks(axis=axis, collection=peak_collection)  # Show peaks
-    text_height = 0.9  # Data coordinates
+    y_bot, y_top = axis.get_ylim()
+    text_height = y_bot + 0.6 * (y_top - y_bot)  # Data coordinates
     _margin = 50
     x_lim = [max(0, current_index - _margin), min(len(data) - 1, current_index + _margin)]
     # Plot clusters
     for cluster in peak_collection.get_clusters:
         bound_left, bound_right = cluster.get_value_slice
-        axis.axvspan(bound_left, bound_right, alpha=0.5, color='green')
+        if bound_right > x_lim[0] or bound_left < x_lim[1]:
+            axis.axvspan(bound_left, bound_right, alpha=0.5, color='green')
         if x_lim[0] < cluster.get_avg_x < x_lim[1]:
             axis.text(x=cluster.get_avg_x, y=text_height, s=r'$\tilde{m}$'+f'={cluster.get_transverse_mode_id}')
     axis.axvline(x=current_index, color='r')
@@ -215,11 +217,9 @@ def set_track_spectrum(axis: plt.axis, data: np.ndarray, current_index: int) -> 
 if __name__ == '__main__':
 
     # filename = 'test_01'
-    # filename = '07-12_800sec_mode_scanning_15FPS'
-    # filename = 'pol000_exp005_gain800'
-    filename = 'pol000_fps0375_gain1000_01HIGHQUALITY'
-    export_video_intensity(filename=filename, update_capture_images=False, build_video=True)
     # filename = '07-12_800sec_mode_scanning_15FPS'  # 'test_01'
     # filename = 'pol040_exp005_gain800'
-    filename = '21-12_10micromcav\\pol000_exp005_gain800_04'
-    export_video_intensity(filename=filename, update_capture_images=False)
+    # filename = '21-12_10micromcav\\pol000_exp005_gain800_04'
+    # filename = '21-12_10micromcav\\pol000_fps0375_gain1000_01HIGHQUALITY'
+    filename = '21-12_10micromcav\\pol000_fps0750_gain1000_01'
+    export_video_intensity(filename=filename, update_capture_images=True, build_video=False)
