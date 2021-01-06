@@ -144,12 +144,13 @@ if __name__ == '__main__':
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
     labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
 
-    plot_3d_sequence(data_classes=meas_iterations, long_mode=0, trans_mode=2)
+    trans_mode = 2
+    long_mode = 0
+    plot_3d_sequence(data_classes=meas_iterations, long_mode=long_mode, trans_mode=trans_mode)
 
     def plot_cross_sections():
         # Test
         index = 0
-        long_mode = 0
 
         ax_full, measurement_class = prepare_measurement_plot(filenames[index])
         measurement_class = get_converted_measurement_data(measurement_class)
@@ -159,7 +160,7 @@ if __name__ == '__main__':
         ax_array = np.ndarray.flatten(ax_array)
         for index in range(len(ax_array)):
             # Plot specific longitudinal mode
-            ax_array[index] = plot_isolated_long_mode(axis=ax_array[index], data_class=meas_iterations[index], collection=labeled_peaks[index], long_mode=long_mode, trans_mode=1)
+            ax_array[index] = plot_isolated_long_mode(axis=ax_array[index], data_class=meas_iterations[index], collection=labeled_peaks[index], long_mode=long_mode, trans_mode=trans_mode)
             if index == 2:
                 ax_array[index].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
