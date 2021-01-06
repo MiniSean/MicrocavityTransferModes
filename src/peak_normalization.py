@@ -30,6 +30,28 @@ class NormalizedPeak(LabeledPeak):
             return (self.get_x - self._anchor_point[0].get_x) / divider
 
 
+class NormalizedPeakCluster(LabeledPeakCluster):
+    def __init__(self, data: LabeledPeakCluster, anchor_data: LabeledPeakCollection):
+        super().__init__(data=data, long_mode=data.get_longitudinal_mode_id, trans_mode=data.get_transverse_mode_id)
+        self._list = [NormalizedPeak(labeled_peak=labeled_peak, anchor_data=anchor_data) for labeled_peak in self._list]
+
+    @property
+    def get_norm_avg_x(self) -> float:
+        """Returns normalized average data point x-location in cluster."""
+        try:
+            return np.mean([peak.get_norm_x for peak in self._list])
+        except AttributeError:
+            return float('nan')
+
+    @property
+    def get_norm_std_x(self) -> float:
+        """Returns normalized standard deviation from data point x-location in cluster."""
+        try:
+            return np.std([peak.get_norm_x for peak in self._list])
+        except AttributeError:
+            return float('nan')
+
+
 # Adds additional normalization functionality to the labeled peak collection
 class NormalizedPeakCollection(LabeledPeakCollection):
     """LabeledPeakCollection with additional normalization functionality to the labeled peak collection"""
@@ -40,12 +62,13 @@ class NormalizedPeakCollection(LabeledPeakCollection):
         self._mode_clusters = self._set_norm_peaks(self._list)
         self._list = flatten_clusters(data=self._mode_clusters)  # Update internal collection with normalized data
 
-    def _set_norm_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
+    def _set_norm_peaks(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[NormalizedPeakCluster]:
         cluster_array = self._set_labeled_clusters(optical_mode_collection)
-        for i, cluster in enumerate(cluster_array):
-            for j, peak in enumerate(cluster):
-                cluster[j] = NormalizedPeak(labeled_peak=peak, anchor_data=self)
-        return cluster_array
+        result = [NormalizedPeakCluster(data=cluster, anchor_data=self) for cluster in cluster_array]
+        # for i, cluster in enumerate(cluster_array):
+        #     for j, peak in enumerate(cluster):
+        #         cluster[j] = NormalizedPeak(labeled_peak=peak, anchor_data=self)
+        return result
 
     def get_normalized_meas_data_slice(self, union_slice: Union[Tuple[float, float], Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray]:
         # Assumes ordered x_array
@@ -71,6 +94,11 @@ class NormalizedPeakCollection(LabeledPeakCollection):
         x_array = (x_array - min_value) / rel_max_value  # Normalize array
         y_array = np.asarray([y for _, y in sorted(zip(x_array, y_array), key=lambda pair: self._get_data_class.sort_key(pair[0]))])  # Sort array
         return x_array, y_array
+
+    @property
+    def get_clusters(self) -> List[NormalizedPeakCluster]:
+        """Returns a list of pre-calculated mode clusters"""
+        return self._mode_clusters
 
 
 if __name__ == '__main__':
