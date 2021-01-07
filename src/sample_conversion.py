@@ -136,7 +136,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     return voltage_map
 
 
-fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+# fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
 
 
 def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset: int, fit_function: Callable[[np.ndarray], np.ndarray], length_map: Callable[[np.ndarray], np.ndarray], cavity_map: Callable[[np.ndarray], np.ndarray]):
