@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Union, Tuple, Dict
+from typing import List, Union, Tuple, Dict, Callable
 from src.import_data import SyncMeasData
 from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 SAMPLE_WAVELENGTH = 633
@@ -104,6 +104,12 @@ class LabeledPeakCollection(PeakCollection):
         # mode_y_distances = [(mode_clusters[i].get_avg_y - mode_clusters[i-1].get_avg_y) for i in range(len(mode_clusters)-1)]
         # mode_y_distances_2nd = [(mode_clusters[i].get_avg_y - mode_clusters[i-2].get_avg_y) for i in range(len(mode_clusters)-1)]
 
+        # print('next')
+        # for i in range(len(mode_clusters)-1):
+        #     print(np.log(mode_clusters[i].get_max_y))
+        #     print(np.log(mode_clusters[i-1].get_max_y))
+        #     print(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-1].get_max_y))
+        #     print()
         mode_high_distances = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-1].get_max_y)) for i in range(len(mode_clusters)-1)]
         mode_high_distances_2nd = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-2].get_max_y)) for i in range(len(mode_clusters)-1)]
 
@@ -250,11 +256,16 @@ class LabeledPeakCollection(PeakCollection):
         return [peak_cluster.get_avg_y for peak_cluster in self.get_clusters]
 
 
-def get_converted_measurement_data(meas_class: SyncMeasData) -> SyncMeasData:
+def get_piezo_response(meas_class: SyncMeasData) -> Callable[[np.ndarray], np.ndarray]:
     from src.sample_conversion import fit_piezo_response
     initial_labeling = LabeledPeakCollection(identify_peaks(meas_class))
     # Set voltage conversion function
-    response_func = fit_piezo_response(cluster_collection=initial_labeling.get_q_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
+    return fit_piezo_response(cluster_collection=initial_labeling.get_q_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
+
+
+def get_converted_measurement_data(meas_class: SyncMeasData) -> SyncMeasData:
+    # Set voltage conversion function
+    response_func = get_piezo_response(meas_class=meas_class)
     meas_class.set_voltage_conversion(conversion_function=response_func)
     return meas_class
 
