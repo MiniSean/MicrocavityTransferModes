@@ -1,35 +1,99 @@
 import numpy as np
-from typing import Union, Iterable, Dict, Any, Tuple
+from typing import Union, Iterable, Dict, Any, Tuple, List
 from src.import_data import import_npy
 from src.peak_relation import LabeledPeakCollection
 
 
-def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[Tuple[Tuple[int, int, int], Tuple[int, int, int]], Tuple[int, float, float]], scan_velocity: float) -> Dict[Tuple[Tuple[int, int, int], Tuple[int, int, int]], Tuple[int, float, float]]:
+def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[Tuple[Tuple[int, int, int], Tuple[int, int, int]], Tuple[List[float], List[float]]], scan_velocity: float) -> Dict[Tuple[Tuple[int, int, int], Tuple[int, int, int]], Tuple[List[float], List[float]]]:
     """
     :param collection:
     :return: ((t_l, t_t), (dt_l, dt_t)) : (#, diff_squared, diff_abs)
     """
     cluster_array = collection.get_clusters
-    for i, cluster_t in enumerate(cluster_array):
+    lim_cluster_array = []
+    for cluster in cluster_array:
+        if cluster.get_longitudinal_mode_id not in [0, 1, 2, 3]:
+            continue
+        lim_cluster_array.append(cluster)
+
+    for i, cluster_t in enumerate(lim_cluster_array):
         t_l = cluster_t.get_longitudinal_mode_id
         t_t = cluster_t.get_transverse_mode_id
         for p, peak_t in enumerate(cluster_t):
 
-            for j, cluster_dt in enumerate(cluster_array[i:]):  # Only compare to upper left matrix triangle (excluding diagonal)
+            for j, cluster_dt in enumerate(lim_cluster_array):  # Only compare to upper left matrix triangle (excluding diagonal)
+                if j < i:
+                    continue
                 dt_l = cluster_dt.get_longitudinal_mode_id
                 dt_t = cluster_dt.get_transverse_mode_id
+                # peak_range = cluster_dt[p+1:] if i == j else cluster_dt  # Only compare to upper left matrix triangle (excluding diagonal)
+                for q, peak_dt in enumerate(cluster_dt):
+                    if i == j and q <= p:
+                        continue
+                    if t_t > 2 or dt_t > 2:
+                        continue
+
+                    # Collect data
+                    abs_difference = peak_dt.get_x - peak_t.get_x
+                    # abs_difference = np.abs(cluster_dt.get_avg_x - cluster_t.get_avg_x)
+                    # Memory save storage
+                    key = ((t_l, t_t, p), (dt_l, dt_t, q))
+                    if key not in pass_dict:
+                        pass_dict[key] = ([abs_difference], [abs(abs_difference)/scan_velocity])
+                    else:
+                        pass_dict[key][0].append(abs_difference)
+                        pass_dict[key][1].append(abs_difference/scan_velocity)
+    return pass_dict
+
+
+def extract_mode_separation_array(collection: LabeledPeakCollection, pass_array: List[Tuple[float, float]], scan_velocity: float) -> List[Tuple[float, float]]:
+    cluster_array = collection.get_clusters
+    for i, cluster_t in enumerate(cluster_array):
+        for p, peak_t in enumerate(cluster_t):
+            for j, cluster_dt in enumerate(cluster_array[i+1:]):  # Only compare to upper left matrix triangle (excluding diagonal)
                 peak_range = cluster_dt[p+1:] if i == j else cluster_dt  # Only compare to upper left matrix triangle (excluding diagonal)
                 for q, peak_dt in enumerate(peak_range):
 
                     # Collect data
                     abs_difference = np.abs(peak_dt.get_x - peak_t.get_x)
-                    # Memory save storage
-                    key = ((t_l, t_t, p), (dt_l, dt_t, q))
-                    if key not in pass_dict:
-                        pass_dict[key] = (1, abs_difference**2, abs_difference/scan_velocity)
-                    else:
-                        pass_dict[key] = (pass_dict[key][0] + 1, pass_dict[key][1] + abs_difference**2, pass_dict[key][2] + abs_difference/scan_velocity)
-    return pass_dict
+                    pass_array.append((abs_difference, abs_difference/scan_velocity))
+    return pass_array
+
+
+def get_outlier_based_variance(ref_array: List[Tuple[float, float]]) -> Tuple[List[float], List[float]]:
+    # Sort based on delta time
+    _ref_array = [(sqrt_diff, dt) for sqrt_diff, dt in sorted(ref_array, key=lambda pair: pair[1])]
+
+    # Cluster data points together
+    sorted_distances = [sqrt_diff for sqrt_diff, _ in _ref_array]
+    sorted_delta_time = [time for _, time in _ref_array]
+
+    time_distances = [(sorted_delta_time[i + 1] - sorted_delta_time[i]) for i in range(len(sorted_delta_time) - 1)]
+    mean = np.mean(time_distances)
+    std = np.std(time_distances)
+    cut_off = mean + 2 * std  # TODO: Hardcoded time interval separation
+    # Detect statistical outliers
+    outlier_indices = LabeledPeakCollection._get_outlier_indices(values=time_distances, cut_off=cut_off)
+    # Construct cluster splitting
+    split_indices = (0,) + tuple(data + 1 for data in outlier_indices) + (len(time_distances) + 1,)
+    y_array = [np.var(sorted_distances[start: end]) for start, end in zip(split_indices, split_indices[1:])]
+    x_array = [np.mean(sorted_delta_time[start: end]) for start, end in zip(split_indices, split_indices[1:])]
+    return x_array, y_array
+
+
+def get_time_interval_variance(ref_array: List[Tuple[float, float]], steps: int) -> Tuple[List[float], List[float]]:
+    t_step = int(len(ref_array) / steps)
+    split_indices = tuple(i * t_step for i in range(steps)) + (len(ref_array) + 1,)
+
+    # Sort based on delta time
+    _ref_array = [(sqrt_diff, dt) for sqrt_diff, dt in sorted(ref_array, key=lambda pair: pair[1])]
+
+    # Cluster data points together
+    sorted_distances = [sqrt_diff for sqrt_diff, _ in _ref_array]
+    sorted_delta_time = [time for _, time in _ref_array]
+    y_array = [np.var(sorted_distances[start: end]) for start, end in zip(split_indices, split_indices[1:])]
+    x_array = [np.mean(sorted_delta_time[start: end]) for start, end in zip(split_indices, split_indices[1:])]
+    return x_array, y_array
 
 
 def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], scan_velocity: float) -> Tuple[np.ndarray, np.ndarray]:
@@ -37,17 +101,31 @@ def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], sca
     if scan_velocity == 0:
         raise ValueError('Scan velocity needs to be a finite positive number')
     reference_dict = {}
+    reference_array = []
 
     # Collect data
     for collection in collection_iterator:
         reference_dict = extract_mode_separation(collection=collection, pass_dict=reference_dict, scan_velocity=scan_velocity)
+        # reference_array = extract_mode_separation_array(collection=collection, pass_array=reference_array, scan_velocity=scan_velocity)
 
     # Average data
     y_array = []
     x_array = []
-    for count, abs_diff, delta_time in reference_dict.values():
-        y_array.append(abs_diff / count)
-        x_array.append(delta_time / count)
+    for abs_diff_array, delta_time_array in reference_dict.values():
+        if len(abs_diff_array) <= 1:
+            continue
+        y_var = np.var(abs_diff_array)
+        x_var = np.mean(delta_time_array)
+        # if x_var < 0.12 and y_var > 2.2:
+        #     print(abs_diff_array)
+        y_array.append(y_var)
+        x_array.append(x_var)
+
+        # y_array.extend(abs_diff_array)
+        # x_array.extend(delta_time_array)
+
+    # x_array, y_array = get_outlier_based_variance(ref_array=reference_array)
+    # x_array, y_array = get_time_interval_variance(ref_array=reference_array, steps=100)
 
     return np.asarray(x_array), np.asarray(y_array)
 
@@ -78,7 +156,7 @@ if __name__ == '__main__':
             yield labeled_collection
 
     iter_count = 10
-    scan_speed = 1
+    scan_speed = 3500
     _x, allan_variance_y = get_allan_variance(collection_iterator=get_collections(iter_count=iter_count), scan_velocity=scan_speed)
     plt.plot(_x, allan_variance_y, '.')
 
@@ -86,11 +164,11 @@ if __name__ == '__main__':
     font_size = 24
     plt.rcParams.update({'font.size': font_size})
 
-    plt.title(f'Allan variance over {iter_count} sample iteration(s)')
-    plt.ylabel(f'Variance' + r' $\langle [x(t + \delta t) - x(t)]^2 \rangle$', fontsize=font_size)
+    plt.title(f'Allan variance. FSR: 1-4, N: 0-2. ({iter_count} iterations)')
+    plt.ylabel(f'Variance' + r' $\langle [x(t + \delta t) - x(t)]^2 \rangle$ $[nm^2]$', fontsize=font_size)
     plt.xlabel(f'Time step' + r' $\delta t[s]$', fontsize=font_size)
-    plt.yscale('log')
-    plt.xscale('log')
+    # plt.yscale('log')
+    # plt.xscale('log')
     # plt.ylim([0, 200000])
     plt.grid(True)
 
