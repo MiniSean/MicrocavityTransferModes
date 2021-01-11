@@ -51,6 +51,7 @@ def plot_pinned_focus(collection_iterator: Iterable[LabeledPeakCollection], pin:
     total_data_slice_array = []
     trans_array = []
     value_focus_array = []
+    data_focus_array = []
     data_class_array = []
     for i, collection in tqdm(enumerate(collection_iterator), desc=f'Process collections'):
         iter_count = i + 1  # Temp
@@ -66,18 +67,22 @@ def plot_pinned_focus(collection_iterator: Iterable[LabeledPeakCollection], pin:
             foc_cluster_array, foc_value_slice = collection.get_mode_sequence(long_mode=sub_focus[0], trans_mode=sub_focus[1])
             # Store peak data
             peak_dict = store_peak_data(dictionary=peak_dict, cluster_array=foc_cluster_array)
+            # Get data slice
+            foc_data_slice = get_value_to_data_slice(data_class=data_class, value_slice=foc_value_slice)
 
             # Store value slice
-            print(sub_focus, foc_value_slice)
+            # print(sub_focus, foc_value_slice)
             if len(value_focus_array) <= j:
                 value_focus_array.insert(j, foc_value_slice)
+                data_focus_array.insert(j, foc_data_slice)
             else:
                 value_focus_array[j] = pad_slice(original=value_focus_array[j], additional=foc_value_slice)
+                data_focus_array[j] = pad_slice(original=data_focus_array[j], additional=foc_data_slice)
 
         # total min-max value slice based on pin and focus slices
         total_value_slice = pin_value_slice
-        for bound in value_focus_array:
-            total_value_slice = pad_slice(original=total_value_slice, additional=bound)
+        for value_bound in value_focus_array:
+            total_value_slice = pad_slice(original=total_value_slice, additional=value_bound)
         # Value to data slice
         total_data_slice = get_value_to_data_slice(data_class=data_class, value_slice=total_value_slice)
 
@@ -91,12 +96,13 @@ def plot_pinned_focus(collection_iterator: Iterable[LabeledPeakCollection], pin:
     # Find data class corresponding to average length
 
     value_slice_length_array = [value_slice[1] - value_slice[0] for value_slice in total_value_slice_array]
+    data_class_array = [data for _, data in sorted(zip(value_slice_length_array, data_class_array), key=lambda pair: pair[0])]  # rearange
     data_class_index = find_nearest_index(array=value_slice_length_array, value=np.max(value_slice_length_array))
-    print(data_class_index)
     lead_data_class = data_class_array[data_class_index]
 
     # Format data
     lead_index = trans_array.index(max(trans_array, key=len))
+    index_offset = total_data_slice_array[lead_index][0]
     trans_array, array_shape = pad_to_dense(nested_array=trans_array)
     trans_array = np.transpose(trans_array)  # Transpose
 
@@ -106,8 +112,10 @@ def plot_pinned_focus(collection_iterator: Iterable[LabeledPeakCollection], pin:
     #                    np.mean([value_slice[1] for value_slice in total_value_slice_array]))
     # std_value_slice = (np.std([value_slice[0] for value_slice in total_value_slice_array]),
     #                    np.std([value_slice[1] for value_slice in total_value_slice_array]))
-    avg_value_slice = (lead_data_class.x_boundless_data[total_data_slice_array[data_class_index][0]],
-                       lead_data_class.x_boundless_data[total_data_slice_array[data_class_index][1]])
+    # print(avg_value_slice[0], std_value_slice[0])
+    # print(avg_value_slice[1], std_value_slice[1])
+    # avg_value_slice = (lead_data_class.x_boundless_data[total_data_slice_array[data_class_index][0]],
+    #                    lead_data_class.x_boundless_data[total_data_slice_array[data_class_index][1]])
     # lead_value_slice = (np.mean([lead_data_class.x_boundless_data[data_slice[0]] for data_slice in total_data_slice_array]),
     #                     np.mean([lead_data_class.x_boundless_data[data_slice[1]] for data_slice in total_data_slice_array]))
 
@@ -120,16 +128,22 @@ def plot_pinned_focus(collection_iterator: Iterable[LabeledPeakCollection], pin:
     plt.pcolormesh(x, y, trans_array, norm=colors.LogNorm())
 
     locs, labels = plt.xticks()
-    plt.xticks(locs[0:-1], np.linspace(start=avg_value_slice[0], stop=avg_value_slice[1], num=len(locs), dtype=int))
+    # xticks = []
+    # for index in locs[0:-1]:
+    #     xticks.append(round(np.mean([data_class.x_boundless_data[int(index_offset + index)] for data_class in data_class_array]), 2))
+    xticks = [round(lead_data_class.x_boundless_data[int(index_offset + index)], 2) for index in locs[0:-1]]
+    # xticks = np.linspace(start=avg_value_slice[0], stop=avg_value_slice[1], num=len(locs), dtype=int)
+    plt.xticks(locs[0:-1], xticks)
     plt.title(f'Pinned plot over {iter_count} sample iteration(s)')
     plt.ylabel(f'Different Iterations [a.u.]', fontsize=font_size)
     #  with {round(std_value_slice[0], 2)}, {round(std_value_slice[1], 2)} ' + r'$\sigma$' + '
     plt.xlabel(f'Cavity length (based on average) [nm]', fontsize=font_size)
     plt.grid(True)
 
-    index_offset = total_data_slice_array[lead_index][0]
-    for i, bound in enumerate(value_focus_array):
-        data_bound = get_value_to_data_slice(data_class=lead_data_class, value_slice=bound)  # Sample to index
+    for i, value_bound in enumerate(value_focus_array):
+        data_bound = get_value_to_data_slice(data_class=lead_data_class, value_slice=value_bound)  # Sample to index
+        print(lead_data_class.x_boundless_data[data_bound[0]])
+        # data_bound = data_focus_array[i]
         fig, ax = plt.subplots()
         array_bound = (data_bound[0] - index_offset, data_bound[1] - index_offset)
 
@@ -148,15 +162,19 @@ def plot_pinned_focus(collection_iterator: Iterable[LabeledPeakCollection], pin:
             if key in peak_dict:
                 avg_pos_value = np.mean(peak_dict[key])  # Sum / Count [nm]
                 std_pos_value = np.std(peak_dict[key])
-                avg_pos_data = find_nearest_index(array=lead_data_class.x_boundless_data, value=avg_pos_value) - (index_offset + array_bound[0])
-                # (avg_pos_value - rev_pos_value)/(SAMPLE_WAVELENGTH/2)
-                ax.axvline(x=avg_pos_data, color='r', ls='--', label=f'{round(avg_pos_value, 5)}' + r' $\pm$ ' + f'{round(std_pos_value, 2)}' + r' [$\lambda / 2$]')
+                # avg_pos_data = int(np.mean([find_nearest_index(array=data_class.x_boundless_data, value=avg_pos_value) for data_class in data_class_array])) - data_bound[0]
+                avg_pos_data = find_nearest_index(array=lead_data_class.x_boundless_data, value=avg_pos_value) - data_bound[0]
+                print(key, avg_pos_value)
+
+                mean = round(avg_pos_value, 5)  # (avg_pos_value - rev_pos_value)/(SAMPLE_WAVELENGTH/2)
+                std = round(std_pos_value, 2)  # (std_pos_value)/(SAMPLE_WAVELENGTH/2)
+                ax.axvline(x=avg_pos_data, color='r', ls='--', label=f'{mean}' + r' $\pm$ ' + f'{std}' + r' [$\lambda / 2$]')
             else:
                 break  # No higher index peaks available
 
         locs, labels = plt.xticks()
-        focus_value_slice = (lead_data_class.x_boundless_data[data_bound[0]], lead_data_class.x_boundless_data[data_bound[1]])
-        plt.xticks(locs[0:-1], np.linspace(start=focus_value_slice[0], stop=focus_value_slice[1], num=len(locs), dtype=int))
+        # focus_value_slice = (lead_data_class.x_boundless_data[data_bound[0]], lead_data_class.x_boundless_data[data_bound[1]])
+        plt.xticks(locs[0:-1], np.linspace(start=value_bound[0], stop=value_bound[1], num=len(locs), dtype=int))
         plt.title(f'Focus mode (q={focus[i][0]}, m+n={focus[i][1]}). Transmission relative to fundamental mode')
         plt.ylabel(f'Different Iterations [a.u.]', fontsize=font_size)
         plt.xlabel(f'Cavity length (based on largest measurement) [nm]', fontsize=font_size)
@@ -189,7 +207,7 @@ if __name__ == '__main__':
             except FileNotFoundError:
                 break
 
-    iter_count = 300
+    iter_count = 10
     plot_pinned_focus(collection_iterator=get_collections(iter_count=iter_count), pin=(0, 0), focus=[(0, 1), (0, 2)])
 
     plt.show()
