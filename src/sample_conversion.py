@@ -157,9 +157,10 @@ def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset
     yerr_length_array = np.array([np.add(avg_length_array, - max_length_array), np.add(min_length_array, -avg_length_array)])
     # Plot effective difference
     ax2.errorbar(x=x_array, y=avg_length_array, yerr=yerr_length_array, fmt=dot_fmt, linewidth=line_width, capsize=cap_width)
-    ax2.set_title(f'Effective difference (q = q* + {q_offset})')
-    ax2.set_xlabel('Voltage [V]')
-    ax2.set_ylabel('Deviation from theory [nm]')
+    ax2.set_title(f'Effective difference (q = q* + {q_offset})', fontsize=font_size)
+    ax2.set_title(f'(c)', fontsize=font_size)
+    ax2.set_xlabel('Voltage [V]', fontsize=font_size)
+    ax2.set_ylabel('$L_{cav} - L_{qmn}$ [nm]', fontsize=font_size)
     ax2.grid(True)
 
     # Plot cavity length
@@ -175,16 +176,18 @@ def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset
     yerr_cavity_array = np.array([np.add(avg_cavity_array, -max_cavity_array), np.add(min_cavity_array, -avg_cavity_array)])
     # ax1.plot(x_array, avg_cavity_array, '.')
     ax1.errorbar(x=x_array, y=avg_cavity_array, yerr=yerr_cavity_array, fmt=dot_fmt, color=dot_color, linewidth=line_width, capsize=cap_width)
-    ax1.set_title(f'Theory prediction based on fitted cavity length')
-    ax1.set_xlabel('Voltage [V]')
-    ax1.set_ylabel('$L_{qmn}$ [nm]')
+    ax1.set_title(f'Theory prediction based on fitted cavity length', fontsize=font_size)
+    ax1.set_title(f'(b)', fontsize=font_size)
+    ax1.set_xlabel('Voltage [V]', fontsize=font_size)
+    ax1.set_ylabel('$L_{qmn}$ [nm]', fontsize=font_size)
     ax1.grid(True)
     # fig, ax2 = plt.subplots()
     # ax0.plot(x_array, avg_fitted_array, '.')
     ax0.errorbar(x=x_array, y=avg_fitted_array, yerr=yerr_fitted_array, fmt='-', color=dot_color, linewidth=line_width, capsize=cap_width)
-    ax0.set_title(f'Fitted cavity length')
-    ax0.set_xlabel('Voltage [V]')
-    ax0.set_ylabel('$L_{cav}$ [nm]')
+    ax0.set_title(f'Fitted cavity length', fontsize=font_size)
+    ax0.set_title(f'(a)', fontsize=font_size)
+    ax0.set_xlabel('Voltage [V]', fontsize=font_size)
+    ax0.set_ylabel('$L_{cav}$ [nm]', fontsize=font_size)
     ax0.grid(True)
 
 
@@ -214,9 +217,13 @@ if __name__ == '__main__':
     from src.import_data import import_npy, FileToMeasData
     from src.peak_identifier import identify_peaks
     from src.peak_relation import LabeledPeakCollection
-    file_samp = 'samples_0_3s_10V_rate1300000.0'
-    file_meas = 'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol090'  # 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration5'  #
+    file_samp = 'samples_1s_10V_rate1300000.0'
+    file_meas = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0'  # 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration5'  #
     filename_base = 'transrefl_tisaph_1s_10V_PMT4_rate1300000.0'
+
+    # Define font
+    font_size = 20
+    plt.rcParams.update({'font.size': font_size})
 
     data_class = FileToMeasData(meas_file=file_meas, samp_file=file_samp)
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
@@ -228,7 +235,7 @@ if __name__ == '__main__':
     # print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')
     # print(f'Cavity length delta between HeNe and TiSaph measurement: {fit_variables[2]} [nm]')
 
-    for i in range(30):
+    for i in range(5):
         _filename = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration{}'.format(i)
         data_class = FileToMeasData(meas_file=_filename, samp_file=file_samp)
         collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
@@ -243,5 +250,5 @@ if __name__ == '__main__':
     ax2.axhline(y=y_mean+y_rms, ls='--', color='orange')
     ax2.axhline(y=y_mean-y_rms, ls='--', color='orange')
 
-    # plt.tight_layout(pad=1)
+    # plt.tight_layout(pad=.01)
     plt.show()
