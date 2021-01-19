@@ -123,25 +123,31 @@ def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], sca
 
         y_array.append(y_var)
         x_array.append(x_var)
-    # # TEMP
-    # plt.plot(x_array, y_array, '.')
-    # # Special FSR
-    # y_array_0X = []
-    # x_array_0X = []
-    # y_array_1X = []
-    # x_array_1X = []
-    # for key in reference_dict.keys():
-    #     ((t_l, t_t, p), (dt_l, dt_t, q)) = key
-    #     if t_l == 0 and dt_l != 0:
-    #         y_array_0X.append(np.var(reference_dict[key][0]))
-    #         x_array_0X.append(np.mean(reference_dict[key][1]))
-    #     if t_l == 1 and dt_l != 1:
-    #         y_array_1X.append(np.var(reference_dict[key][0]))
-    #         x_array_1X.append(np.mean(reference_dict[key][1]))
-    #
-    # plt.plot(x_array_0X, y_array_0X, '.', label=f'1st FSR')
-    # plt.plot(x_array_1X, y_array_1X, '.', label=f'2nd FSR')
-    # plt.legend()
+    # TEMP
+    plt.plot(x_array, y_array, '.')
+    # Special FSR
+    y_array_0X = []
+    x_array_0X = []
+    y_array_1X = []
+    x_array_1X = []
+    y_array_6X = []
+    x_array_6X = []
+    for key in reference_dict.keys():
+        ((t_l, t_t, p), (dt_l, dt_t, q)) = key
+        if t_l == 0 and dt_l != 0:
+            y_array_0X.append(np.var(reference_dict[key][0]))
+            x_array_0X.append(np.mean(reference_dict[key][1]))
+        if t_l == 1 and dt_l > 1:
+            y_array_1X.append(np.var(reference_dict[key][0]))
+            x_array_1X.append(np.mean(reference_dict[key][1]))
+        if t_l == 6 and dt_l > 6:
+            y_array_1X.append(np.var(reference_dict[key][0]))
+            x_array_1X.append(np.mean(reference_dict[key][1]))
+
+    plt.plot(x_array_0X, y_array_0X, '.', label=f'1st FSR')
+    plt.plot(x_array_1X, y_array_1X, '.', label=f'2nd FSR')
+    plt.plot(x_array_6X, y_array_6X, '.', label=f'6th FSR')
+    plt.legend()
 
     return np.asarray(x_array), np.asarray(y_array)
 
@@ -177,13 +183,13 @@ if __name__ == '__main__':
     iter_count = 30
     scan_speed = 3500
     _x, allan_variance_y = get_allan_variance(collection_iterator=get_collections(iter_count=iter_count), scan_velocity=scan_speed)
-    plt.plot(_x, allan_variance_y, '.')
+    # plt.plot(_x, allan_variance_y, '.')
 
     # Define font
     font_size = 22
     plt.rcParams.update({'font.size': font_size})
 
-    plt.title(f'Allan variance. FSR: {LM_ARRAY[0]}-{LM_ARRAY[-1]}, N: {TM_ARRAY[0]}-{TM_ARRAY[-1]}. ({iter_count} iterations)')
+    # plt.title(f'Allan variance. FSR: {LM_ARRAY[0]}-{LM_ARRAY[-1]}, N: {TM_ARRAY[0]}-{TM_ARRAY[-1]}. ({iter_count} iterations)')
     plt.ylabel(f'Variance' + r' $\langle [x(t + \delta t) - x(t)]^2 \rangle$ $[nm^2]$', fontsize=font_size)
     plt.xlabel(f'Time step' + r' $\delta t[s]$', fontsize=font_size)
     plt.yscale('log')
