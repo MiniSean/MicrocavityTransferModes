@@ -28,7 +28,7 @@ def get_radius_estimate(cluster_array: List[LabeledPeakCluster], wavelength: flo
     x_array = np.asarray([cluster.get_avg_x for cluster in cluster_array])
     fit_func = get_radius_fit_function(cluster_array=cluster_array, wavelength=wavelength)
     initial_radius = 10e4
-    params, param_dict = curve_fit(fit_func, xdata=x_array, ydata=np.zeros(len(x_array)), p0=[initial_radius, 0.], maxfev=100000, bounds=(0, +np.inf))
+    params, param_dict = curve_fit(fit_func, xdata=x_array, ydata=np.zeros(len(x_array)), p0=[initial_radius, 0.1], maxfev=100000, bounds=(0., +np.inf))
     return params, np.sqrt(np.diag(param_dict))  # [0], param_dict[0][0]  # mean, std
 
 
@@ -42,36 +42,26 @@ if __name__ == '__main__':
 
     wavelength = 633  # nm
     # Collect peaks
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT4_rate1300000.0itteration1')
     measurement_class = get_converted_measurement_data(meas_class=measurement_class)
     labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
-    normal_collection = NormalizedPeakCollection(labeled_collection)
-    cluster_array = normal_collection.get_clusters
+    # normal_collection = NormalizedPeakCollection(labeled_collection)
+    cluster_array = labeled_collection.get_clusters
     [radius_mean, offset], [radius_std, offset_std] = get_radius_estimate(cluster_array=cluster_array, wavelength=wavelength)
 
-    print(radius_mean)
-    print(offset)
+    print(f'Cavity radius: R = {round(radius_mean, 1)} ' + r'+/-' + f' {round(radius_std, 1)} [nm]')
+    print(f'Cavity offset length: {offset} [nm]')
 
     def plot_func(length_input: np.ndarray, trans_mode: int) -> np.ndarray:
         return (trans_mode / np.pi) * np.arcsin(np.sqrt((length_input + offset) / radius_mean))
 
     # Adds q clusters
-    cluster_array.extend([NormalizedPeakCluster(data=cluster, anchor_data=labeled_collection) for cluster in normal_collection.get_q_clusters])
+    # NormalizedPeakCluster(data=cluster, anchor_data=labeled_collection)
+    cluster_array.extend([cluster for cluster in labeled_collection.get_q_clusters])
     for i in [-1, 0, 1, 2, 3, 4, 5]:
         sub_cluster_array = [cluster for cluster in cluster_array if cluster.get_transverse_mode_id == i]
         if len(sub_cluster_array) == 0:
             continue
-        # x_array = np.asarray([cluster.get_avg_x for cluster in sub_cluster_array])
-        # y_func = get_radius_fit_function(cluster_array=sub_cluster_array, wavelength=wavelength)
-        # y = []
-        # x = []
-        # for cluster in sub_cluster_array:
-        #     norm_pos = cluster.get_norm_avg_x
-        #     y.append(norm_pos)
-        #     if math.isnan(norm_pos):
-        #         x.append(norm_pos)
-        #     else:
-        #         x.append(cluster.get_avg_x)
 
         d = np.asarray([cluster.get_avg_x for cluster in sub_cluster_array])
 

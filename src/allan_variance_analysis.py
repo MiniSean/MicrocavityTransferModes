@@ -2,6 +2,8 @@ import numpy as np
 from typing import Union, Iterable, Dict, Any, Tuple, List
 from src.import_data import import_npy
 from src.peak_relation import LabeledPeakCollection
+LM_ARRAY = [0, 1, 2, 3, 4, 5, 6]
+TM_ARRAY = [0, 1, 2]
 
 
 def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[Tuple[Tuple[int, int, int], Tuple[int, int, int]], Tuple[List[float], List[float]]], scan_velocity: float) -> Dict[Tuple[Tuple[int, int, int], Tuple[int, int, int]], Tuple[List[float], List[float]]]:
@@ -12,7 +14,7 @@ def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[T
     cluster_array = collection.get_clusters
     lim_cluster_array = []
     for cluster in cluster_array:
-        if cluster.get_longitudinal_mode_id not in [0, 1, 2, 3]:
+        if cluster.get_longitudinal_mode_id not in LM_ARRAY:
             continue
         lim_cluster_array.append(cluster)
 
@@ -30,7 +32,7 @@ def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[T
                 for q, peak_dt in enumerate(cluster_dt):
                     if i == j and q <= p:
                         continue
-                    if t_t > 2 or dt_t > 2:
+                    if t_t not in TM_ARRAY or dt_t not in TM_ARRAY:
                         continue
 
                     # Collect data
@@ -116,16 +118,30 @@ def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], sca
             continue
         y_var = np.var(abs_diff_array)
         x_var = np.mean(delta_time_array)
-        # if x_var < 0.12 and y_var > 2.2:
-        #     print(abs_diff_array)
+        if y_var > 200:  # Outlier
+            continue
+
         y_array.append(y_var)
         x_array.append(x_var)
-
-        # y_array.extend(abs_diff_array)
-        # x_array.extend(delta_time_array)
-
-    # x_array, y_array = get_outlier_based_variance(ref_array=reference_array)
-    # x_array, y_array = get_time_interval_variance(ref_array=reference_array, steps=100)
+    # # TEMP
+    # plt.plot(x_array, y_array, '.')
+    # # Special FSR
+    # y_array_0X = []
+    # x_array_0X = []
+    # y_array_1X = []
+    # x_array_1X = []
+    # for key in reference_dict.keys():
+    #     ((t_l, t_t, p), (dt_l, dt_t, q)) = key
+    #     if t_l == 0 and dt_l != 0:
+    #         y_array_0X.append(np.var(reference_dict[key][0]))
+    #         x_array_0X.append(np.mean(reference_dict[key][1]))
+    #     if t_l == 1 and dt_l != 1:
+    #         y_array_1X.append(np.var(reference_dict[key][0]))
+    #         x_array_1X.append(np.mean(reference_dict[key][1]))
+    #
+    # plt.plot(x_array_0X, y_array_0X, '.', label=f'1st FSR')
+    # plt.plot(x_array_1X, y_array_1X, '.', label=f'2nd FSR')
+    # plt.legend()
 
     return np.asarray(x_array), np.asarray(y_array)
 
@@ -149,25 +165,28 @@ if __name__ == '__main__':
 
     def get_collections(iter_count: int) -> Iterable[LabeledPeakCollection]:
         for i in range(iter_count):
-            filename = file_fetch_function(iteration=i)
-            measurement_class = FileToMeasData(meas_file=filename, samp_file=file_samp)
-            measurement_class = get_converted_measurement_data(meas_class=measurement_class)
-            labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
-            yield labeled_collection
+            try:
+                filename = file_fetch_function(iteration=i)
+                measurement_class = FileToMeasData(meas_file=filename, samp_file=file_samp)
+                measurement_class = get_converted_measurement_data(meas_class=measurement_class)
+                labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
+                yield labeled_collection
+            except FileNotFoundError:
+                break
 
-    iter_count = 10
+    iter_count = 30
     scan_speed = 3500
     _x, allan_variance_y = get_allan_variance(collection_iterator=get_collections(iter_count=iter_count), scan_velocity=scan_speed)
     plt.plot(_x, allan_variance_y, '.')
 
     # Define font
-    font_size = 24
+    font_size = 22
     plt.rcParams.update({'font.size': font_size})
 
-    plt.title(f'Allan variance. FSR: 1-4, N: 0-2. ({iter_count} iterations)')
+    plt.title(f'Allan variance. FSR: {LM_ARRAY[0]}-{LM_ARRAY[-1]}, N: {TM_ARRAY[0]}-{TM_ARRAY[-1]}. ({iter_count} iterations)')
     plt.ylabel(f'Variance' + r' $\langle [x(t + \delta t) - x(t)]^2 \rangle$ $[nm^2]$', fontsize=font_size)
     plt.xlabel(f'Time step' + r' $\delta t[s]$', fontsize=font_size)
-    # plt.yscale('log')
+    plt.yscale('log')
     # plt.xscale('log')
     # plt.ylim([0, 200000])
     plt.grid(True)
