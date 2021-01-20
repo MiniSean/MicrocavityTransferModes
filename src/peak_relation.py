@@ -100,6 +100,21 @@ class LabeledPeakCollection(PeakCollection):
 
     def _set_labeled_clusters(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
+        # Overlap separation
+        for mode in mode_clusters:
+            peak_height = sorted([peak.get_y for peak in mode], key=lambda x: -x)
+            peak_height_distances = [peak_height[i] - peak_height[i + 1] for i in range(len(peak_height) - 1)]
+            if len(peak_height_distances) < 2:
+                continue
+
+            mean = np.mean(peak_height_distances)
+            std = np.std(peak_height_distances)
+            cut_off = (mean + 2.5 * std)
+            outlier_indices = LabeledPeakCollection._get_outlier_indices(values=peak_height_distances, cut_off=cut_off)
+            if len(outlier_indices) > 0:
+                print(mode.get_avg_x, len(outlier_indices))
+                temp.append(mode.get_avg_x)
+
         sort_key = mode_clusters[0][0]._data.sort_key  # Cluster sorting key (Small-to-Large [nm] or Large-to-Small [V])
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
 
@@ -317,6 +332,7 @@ if __name__ == '__main__':
     from src.plot_npy import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class
     from src.peak_identifier import identify_noise_ceiling
 
+    temp = []
     # # Temp
     # from src.structural_analysis import MeasurementAnalysis
     # analysis = MeasurementAnalysis(meas_file='transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000', samp_file='samples_0_3s_10V_rate1300000.0', scan_file=None)
@@ -331,7 +347,7 @@ if __name__ == '__main__':
     # measurement_class2.slicer = data_slice
 
     # Collect peaks
-    measurement_class = get_converted_measurement_data(meas_class=measurement_class)
+    # measurement_class = get_converted_measurement_data(meas_class=measurement_class)
     labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
     print(len(labeled_collection))
 
@@ -361,6 +377,9 @@ if __name__ == '__main__':
     # Draw noise h-lines
     noise_ceiling = identify_noise_ceiling(measurement_class)
     ax.axhline(y=noise_ceiling, color='r')
+
+    for value in temp:
+        ax.axvline(x=value, color='r')
 
     # Show
     # ax2.legend()
