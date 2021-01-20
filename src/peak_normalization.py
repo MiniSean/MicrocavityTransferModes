@@ -15,7 +15,7 @@ class NormalizedPeak(LabeledPeak):
         super().__init__(labeled_peak, labeled_peak.get_longitudinal_mode_id, labeled_peak.get_transverse_mode_id)
         self._anchor_point = self._get_anchor_points(anchor_data=anchor_data)
 
-    def _get_anchor_points(self, anchor_data: LabeledPeakCollection) -> Tuple[Union[LabeledPeak, None], Union[LabeledPeak, None]]:
+    def _get_anchor_points(self, anchor_data: LabeledPeakCollection) -> Tuple[Union[LabeledPeakCluster, None], Union[LabeledPeakCluster, None]]:
         try:
             return anchor_data.q_dict[self.get_longitudinal_mode_id], anchor_data.q_dict[self.get_longitudinal_mode_id + 1]
         except KeyError:
@@ -23,11 +23,11 @@ class NormalizedPeak(LabeledPeak):
 
     @property
     def get_norm_x(self) -> Union[float, None]:
-        divider = self._anchor_point[1].get_x - self._anchor_point[0].get_x
+        divider = self._anchor_point[1].get_avg_x - self._anchor_point[0].get_avg_x
         if self._anchor_point[0] is None or self._anchor_point[1] is None or divider == 0:
             return None
         else:
-            return (self.get_x - self._anchor_point[0].get_x) / divider
+            return (self.get_x - self._anchor_point[0].get_avg_x) / divider
 
 
 class NormalizedPeakCluster(LabeledPeakCluster):
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     from src.peak_identifier import identify_peaks
     from src.peak_relation import get_converted_measurement_data
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0')
     # Normalized peak collection
     norm_peak_collection = NormalizedPeakCollection(identify_peaks(get_converted_measurement_data(measurement_class)))
 
