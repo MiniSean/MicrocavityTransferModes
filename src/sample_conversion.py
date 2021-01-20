@@ -4,6 +4,7 @@ import logging
 from typing import Callable, Any, Iterator, List, Union
 import matplotlib.pyplot as plt
 from src.peak_relation import LabeledPeakCluster
+FONT_SIZE = 20
 
 
 # Laser-optics transformations
@@ -80,7 +81,7 @@ def length_mode_consistency(wavelength: float) -> Callable[[np.ndarray], np.ndar
     return map_function
 
 
-def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wavelength: float) -> Callable[[np.ndarray], np.ndarray]:
+def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wavelength: float, verbose: bool = False) -> Callable[[np.ndarray], np.ndarray]:
     """
     Attempts to fit a piezo-voltage to cavity-length response function based on the theoretical relations between the detected modes.
     :param cluster_collection: Collection with labled modes (q and m+n labels)
@@ -102,7 +103,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     p0 = [a, b, c, L0]
 
     # Mode samples
-    q_offset = 4
+    q_offset = 3
     x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
     q = np.asarray([mode.get_longitudinal_mode_id + q_offset for mode in cluster_collection])
     # m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
@@ -127,8 +128,9 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
 
     # Plot
     voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v)
-    # cavity_map = lambda d: length_mode_consistency(wavelength=sample_wavelength)(q)
-    # plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, L0), length_map=voltage_map, cavity_map=cavity_map)
+    if verbose:
+        cavity_map = lambda d: length_mode_consistency(wavelength=sample_wavelength)(q)
+        plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, L0), length_map=voltage_map, cavity_map=cavity_map)
 
     print(f'Cavity offset length (lowest q*={int(q_offset)}): {np.min(voltage_map(x_array))} [nm]')
     # return Piezo behaviour function
@@ -157,10 +159,10 @@ def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset
     yerr_length_array = np.array([np.add(avg_length_array, - max_length_array), np.add(min_length_array, -avg_length_array)])
     # Plot effective difference
     ax2.errorbar(x=x_array, y=avg_length_array, yerr=yerr_length_array, fmt=dot_fmt, linewidth=line_width, capsize=cap_width)
-    ax2.set_title(f'Effective difference (q = q* + {q_offset})', fontsize=font_size)
-    ax2.set_title(f'(c)', fontsize=font_size)
-    ax2.set_xlabel('Voltage [V]', fontsize=font_size)
-    ax2.set_ylabel('$L_{cav} - L_{qmn}$ [nm]', fontsize=font_size)
+    ax2.set_title(f'Effective difference (q = q* + {q_offset})', fontsize=FONT_SIZE)
+    ax2.set_title(f'(c)', fontsize=FONT_SIZE)
+    ax2.set_xlabel('Voltage [V]', fontsize=FONT_SIZE)
+    ax2.set_ylabel('$L_{cav} - L_{qmn}$ [nm]', fontsize=FONT_SIZE)
     ax2.grid(True)
 
     # Plot cavity length
@@ -176,18 +178,18 @@ def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset
     yerr_cavity_array = np.array([np.add(avg_cavity_array, -max_cavity_array), np.add(min_cavity_array, -avg_cavity_array)])
     # ax1.plot(x_array, avg_cavity_array, '.')
     ax1.errorbar(x=x_array, y=avg_cavity_array, yerr=yerr_cavity_array, fmt=dot_fmt, color=dot_color, linewidth=line_width, capsize=cap_width)
-    ax1.set_title(f'Theory prediction based on fitted cavity length', fontsize=font_size)
-    ax1.set_title(f'(b)', fontsize=font_size)
-    ax1.set_xlabel('Voltage [V]', fontsize=font_size)
-    ax1.set_ylabel('$L_{qmn}$ [nm]', fontsize=font_size)
+    ax1.set_title(f'Theory prediction based on fitted cavity length', fontsize=FONT_SIZE)
+    ax1.set_title(f'(b)', fontsize=FONT_SIZE)
+    ax1.set_xlabel('Voltage [V]', fontsize=FONT_SIZE)
+    ax1.set_ylabel('$L_{qmn}$ [nm]', fontsize=FONT_SIZE)
     ax1.grid(True)
     # fig, ax2 = plt.subplots()
     # ax0.plot(x_array, avg_fitted_array, '.')
     ax0.errorbar(x=x_array, y=avg_fitted_array, yerr=yerr_fitted_array, fmt='-', color=dot_color, linewidth=line_width, capsize=cap_width)
-    ax0.set_title(f'Fitted cavity length', fontsize=font_size)
-    ax0.set_title(f'(a)', fontsize=font_size)
-    ax0.set_xlabel('Voltage [V]', fontsize=font_size)
-    ax0.set_ylabel('$L_{cav}$ [nm]', fontsize=font_size)
+    ax0.set_title(f'Fitted cavity length', fontsize=FONT_SIZE)
+    ax0.set_title(f'(a)', fontsize=FONT_SIZE)
+    ax0.set_xlabel('Voltage [V]', fontsize=FONT_SIZE)
+    ax0.set_ylabel('$L_{cav}$ [nm]', fontsize=FONT_SIZE)
     ax0.grid(True)
 
 
@@ -222,8 +224,7 @@ if __name__ == '__main__':
     filename_base = 'transrefl_tisaph_1s_10V_PMT4_rate1300000.0'
 
     # Define font
-    font_size = 20
-    plt.rcParams.update({'font.size': font_size})
+    plt.rcParams.update({'font.size': FONT_SIZE})
 
     data_class = FileToMeasData(meas_file=file_meas, samp_file=file_samp)
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
@@ -238,17 +239,19 @@ if __name__ == '__main__':
     for i in range(5):
         _filename = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration{}'.format(i)
         data_class = FileToMeasData(meas_file=_filename, samp_file=file_samp)
-        collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
+        identified_peaks = identify_peaks(meas_data=data_class)
+        collection_class = LabeledPeakCollection(identified_peaks)
 
         cluster_collection = collection_class.get_q_clusters  # collection_class.get_clusters
-        piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=633)
+        piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=633, verbose=True)
     # Obtain mean and root-mean-square
     y_values = [value for line in ax2.lines for value in line.get_ydata()]
     y_mean = np.mean(y_values)
     y_rms = np.sqrt(np.sum((y_values - y_mean)**2) / len(y_values))
     ax2.axhline(y=y_mean, ls='--', color='darkorange')
-    ax2.axhline(y=y_mean+y_rms, ls='--', color='orange')
-    ax2.axhline(y=y_mean-y_rms, ls='--', color='orange')
+    ax2.axhline(y=y_mean+y_rms, ls='--', color='orange', label=f'Upper: {round(y_mean+y_rms, 2)} [nm]')
+    ax2.axhline(y=y_mean-y_rms, ls='--', color='orange', label=f'Lower: {round(y_mean-y_rms, 2)} [nm]')
 
     # plt.tight_layout(pad=.01)
+    plt.legend()
     plt.show()
