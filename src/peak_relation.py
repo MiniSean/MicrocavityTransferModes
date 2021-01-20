@@ -3,6 +3,9 @@ from typing import List, Union, Tuple, Dict, Callable
 from src.import_data import SyncMeasData
 from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 SAMPLE_WAVELENGTH = 633
+# cutoff = mean + c * std
+HEIGHT_SEPARATION = 0.65  # [0, 2]: Minimum height value between clusters-max to specify as new fundamental mode
+CLUSTER_SEPARATION = 0.1  # [0, 2]: Minimum distance value between peaks within a single cluster
 
 
 class LabeledPeak(PeakData):
@@ -105,7 +108,7 @@ class LabeledPeakCollection(PeakCollection):
 
         mean = np.mean(mode_high_distances)
         std = np.std(mode_high_distances)
-        cut_off = (mean + 0.75 * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
+        cut_off = (mean + HEIGHT_SEPARATION * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
         fundamental_indices = [i for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] > cut_off]
         overlap_indices = [i-1 for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] < cut_off]
 
@@ -225,7 +228,7 @@ class LabeledPeakCollection(PeakCollection):
         std = np.std(distances)
         # print(max(distances) - min(distances))  # 0.2497
         # print(.24 * (mean + 2 * std))  # 0.0409
-        cut_off = mean + (.1) * std  # 0.24 * (mean + 2 * std)  # TODO: Hardcoded cluster separation
+        cut_off = mean + CLUSTER_SEPARATION * std  # 0.24 * (mean + 2 * std)  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
         outlier_indices = LabeledPeakCollection._get_outlier_indices(values=distances, cut_off=cut_off)
         # Construct cluster splitting
