@@ -100,16 +100,6 @@ class LabeledPeakCollection(PeakCollection):
         sort_key = mode_clusters[0][0]._data.sort_key  # Cluster sorting key (Small-to-Large [nm] or Large-to-Small [V])
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
 
-        # Use first and second order difference to handle transverse mode cluster overlap between two main modes
-        # mode_y_distances = [(mode_clusters[i].get_avg_y - mode_clusters[i-1].get_avg_y) for i in range(len(mode_clusters)-1)]
-        # mode_y_distances_2nd = [(mode_clusters[i].get_avg_y - mode_clusters[i-2].get_avg_y) for i in range(len(mode_clusters)-1)]
-
-        # print('next')
-        # for i in range(len(mode_clusters)-1):
-        #     print(np.log(mode_clusters[i].get_max_y))
-        #     print(np.log(mode_clusters[i-1].get_max_y))
-        #     print(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-1].get_max_y))
-        #     print()
         mode_high_distances = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-1].get_max_y)) for i in range(len(mode_clusters)-1)]
         mode_high_distances_2nd = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-2].get_max_y)) for i in range(len(mode_clusters)-1)]
 
@@ -140,18 +130,30 @@ class LabeledPeakCollection(PeakCollection):
                 result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id, trans_mode=trans_mode_id))
         return result  # [peak_data for peak_data in optical_mode_collection]
 
-    def _set_q_dict(self, cluster_array: List[LabeledPeakCluster]) -> Dict[int, Union[LabeledPeak, None]]:
+    def _set_q_dict(self, cluster_array: List[LabeledPeakCluster]) -> Dict[int, Union[LabeledPeakCluster, None]]:
+        """
+        Creates a dictionary for estimated m+n=-1 modes.
+        These clusters consists of predicted peak positions based on all transverse modes in the relevant longitudinal mode.
+        :param cluster_array: All identified clusters within the data
+        :return: Dict[ longitudinal mode, (m+n=-1) peak cluster ]
+        """
         result = {}
         data_class = self._get_data_class
         for i in range(cluster_array[-1].get_longitudinal_mode_id):
             try:  # find q mode estimate until not enough data points are available
-                value = self.get_q_estimate(long_mode=i)
+                pos_array = self.get_q_estimate(long_mode=i)
             except ValueError:  # Add None identifier for last q mode
                 result[i] = None
                 return result
-            data_index = find_nearest_index(array=data_class.x_boundless_data, value=value)
-            peak = LabeledPeak(PeakData(data=data_class, index=data_index), long_mode=i, trans_mode=-1)
-            result[i] = peak
+            # Construct labeled peak cluster
+            peak_array = []
+            for j, pos_value in enumerate(pos_array):
+                data_index = find_nearest_index(array=data_class.x_boundless_data, value=pos_value)
+                peak = LabeledPeak(PeakData(data=data_class, index=data_index), long_mode=i, trans_mode=-1)
+                peak_array.append(peak)
+            cluster = LabeledPeakCluster(data=peak_array, long_mode=i, trans_mode=-1)
+
+            result[i] = cluster
         return result
 
     def get_labeled_clusters(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeakCluster]:
@@ -180,7 +182,7 @@ class LabeledPeakCollection(PeakCollection):
         if trans_mode is None:  # Sequence entire longitudinal mode slice
             # Create sequence data_slice
             cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
-            value_slice = (self.get_q_estimate(long_mode=long_mode), self.get_q_estimate(long_mode=long_mode + 1))
+            value_slice = (np.mean(self.get_q_estimate(long_mode=long_mode)), np.mean(self.get_q_estimate(long_mode=long_mode + 1)))
             if value_slice[0] > value_slice[1]:  # Swap data_slice order to maintain (low, high) bound structure
                 value_slice = (value_slice[1], value_slice[0])
             return cluster_array, value_slice
@@ -188,13 +190,19 @@ class LabeledPeakCollection(PeakCollection):
             cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode)
             return cluster_array, cluster_array[0].get_value_slice
 
-    def get_q_estimate(self, long_mode: int) -> float:
+    def get_q_estimate(self, long_mode: int) -> List[float]:
+        """
+        Predicts m+n=-1 mode based on higher order transverse mode locations
+        :param long_mode: Specific longitudinal mode to search for relevant transverse modes
+        :return: List[ positions depending on all relevant transverse modes ]
+        """
         sequence = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
         if len(sequence) < 2:
             raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
-        distances = [sequence[i + 1].get_avg_x - sequence[i].get_avg_x for i in range(len(sequence) - 1)]
+        max_range = len(sequence) - 1
+        distances = [sequence[i + 1].get_avg_x - sequence[i].get_avg_x for i in range(max_range)]
         # distances = [sequence[1].get_avg_x - sequence[0].get_avg_x]  # Only relative to first transverse mode
-        return sequence[0].get_avg_x - np.mean(distances)
+        return [sequence[0].get_avg_x - dist for dist in distances]
 
     def get_measurement_data_slice(self, union_slice: Union[Tuple[float, float], Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray]:
         """Returns sample (x) and measurement (y) array data from requested data/value slice."""
@@ -239,10 +247,10 @@ class LabeledPeakCollection(PeakCollection):
 
     @property
     def get_q_clusters(self) -> List[LabeledPeakCluster]:
-        """Returns a list of q (m + n = 1) clusters"""
+        """Returns a list of q (m + n = -1) clusters"""
         result = []
-        for q_long_id, q_peak in self.q_dict.items():
-            result.append(LabeledPeakCluster(data=[q_peak], long_mode=q_long_id, trans_mode=-1))
+        for q_long_id, q_cluster in self.q_dict.items():
+            result.append(q_cluster)
         return result
 
     @property
@@ -312,8 +320,8 @@ if __name__ == '__main__':
     # print(analysis)
 
     # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration_pol000')
-    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000')
+    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0')
+    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0')
     #     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
     # measurement_class.slicer = data_slice  # Zooms in on relevant data part
