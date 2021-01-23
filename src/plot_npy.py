@@ -46,8 +46,9 @@ def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollect
 
 
 def plot_cluster_collection(axis: plt.axes, data: Union[List[LabeledPeakCluster], LabeledPeakCollection]) -> plt.axes:
-    for cluster in (data.get_clusters if isinstance(data, LabeledPeakCollection) else data):
+    for cluster in (data if isinstance(data, list) else data.get_clusters):
         axis = plot_peak_collection(axis=axis, data=cluster, label=f'n+m={cluster.get_transverse_mode_id}')
+        axis.text(x=cluster.get_avg_x, y=cluster.get_max_y, s=f'({cluster.get_longitudinal_mode_id}, {cluster.get_transverse_mode_id})', fontsize=8, horizontalalignment='center', verticalalignment='bottom')
     return axis
 
 
