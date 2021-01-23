@@ -15,7 +15,7 @@
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.import_data import FileToMeasData
-    from src.plot_functions import plot_peak_identification, plot_peak_relation
+    from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap
 
     # Data file reference (Import data)
     file_path = 'data/Trans/20210104'  # Directory path from project root (Optional)
@@ -42,5 +42,7 @@ if __name__ == '__main__':
     # Normalized based on free-spectral-ranges (FSR)
     from src.peak_normalization import NormalizedPeakCollection
     normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
+    plot_peak_normalization_spectrum(collection=normalized_collection)  # Plot
+    plot_peak_normalization_overlap(collection=normalized_collection)  # Plot
 
     plt.show()

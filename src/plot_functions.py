@@ -3,7 +3,8 @@ from matplotlib import rcParams
 from typing import Tuple, Union, List
 from src.import_data import import_npy, slice_array, SyncMeasData, FileToMeasData
 from src.peak_identifier import PeakCollection, PeakData
-from src.peak_relation import LabeledPeakCollection, LabeledPeak, LabeledPeakCluster
+from src.peak_relation import LabeledPeakCollection, LabeledPeakCluster, flatten_clusters
+from src.peak_normalization import NormalizedPeakCollection, NormalizedPeak
 # Allows to surpass the hardcoded limit in the number of points in the backend Agg
 rcParams['agg.path.chunksize'] = 1000
 
@@ -94,6 +95,54 @@ def plot_peak_relation(collection: LabeledPeakCollection, meas_class: SyncMeasDa
     _ax.axvline(x=value_slice[0], color='r', alpha=1)
     _ax.axvline(x=value_slice[1], color='g', alpha=1)
     _ax = plot_cluster_collection(axis=_ax, data=collection)
+    return _ax
+
+
+def plot_peak_normalization_spectrum(collection: NormalizedPeakCollection) -> plt.axes:
+    # Store plot figure and axis
+    def peak_inclusion(peak: NormalizedPeak) -> bool:
+        return peak.get_norm_x is not None and 0 <= peak.get_norm_x <= 1
+
+    _, _ax = plt.subplots()
+    _ax = get_standard_axis(axis=_ax)
+    for i in range(max(collection.q_dict.keys())):
+        try:
+            cluster_array, value_slice = collection.get_mode_sequence(long_mode=i)
+            # Get normalized measurement
+            x_sample, y_measure = collection.get_measurement_data_slice(union_slice=value_slice)
+            _ax.plot(x_sample, y_measure, alpha=1)
+            # Get normalized peaks
+            peak_array = flatten_clusters(data=cluster_array)
+            y = [peak.get_y for peak in peak_array if peak_inclusion(peak)]
+            x = [peak.get_x for peak in peak_array if peak_inclusion(peak)]
+            _ax.plot(x, y, 'x', alpha=1)
+        except AttributeError:
+            break
+    return _ax
+
+
+def plot_peak_normalization_overlap(collection: NormalizedPeakCollection) -> plt.axes:
+    # Store plot figure and axis
+    def peak_inclusion(peak: NormalizedPeak) -> bool:
+        return peak.get_norm_x is not None and 0 <= peak.get_norm_x <= 1
+
+    alpha = 0.5
+    _, _ax = plt.subplots()
+    _ax = get_standard_axis(axis=_ax)
+    for i in range(max(collection.q_dict.keys())):
+        try:
+            cluster_array, value_slice = collection.get_mode_sequence(long_mode=i)
+            # Get normalized measurement
+            x_sample, y_measure = collection.get_normalized_meas_data_slice(union_slice=value_slice)
+            _ax.plot(x_sample, y_measure, alpha=alpha)
+            # Get normalized peaks
+            peak_array = flatten_clusters(data=cluster_array)
+            y = [peak.get_y for peak in peak_array if peak_inclusion(peak)]
+            x = [peak.get_norm_x for peak in peak_array if peak_inclusion(peak)]
+            _ax.plot(x, y, 'x', alpha=alpha)
+        except AttributeError:
+            break
+    _ax.set_xlabel('Normalized distance ' + r'$[\lambda / 2]$')
     return _ax
 
 
