@@ -361,7 +361,7 @@ if __name__ == '__main__':
     cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=0)
     data_slice = get_value_to_data_slice(measurement_class, value_slice)
 
-    ax = plot_peak_collection(axis=ax, data=flatten_clusters(data=labeled_collection.get_clusters))
+    ax = plot_cluster_collection(axis=ax, data=labeled_collection)
 
     ax.axvline(x=value_slice[0], color='r', alpha=1)
     ax.axvline(x=value_slice[1], color='g', alpha=1)
