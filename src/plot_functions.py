@@ -4,6 +4,8 @@ from typing import Tuple, Union, List
 from src.import_data import import_npy, slice_array, SyncMeasData, FileToMeasData
 from src.peak_identifier import PeakCollection, PeakData
 from src.peak_relation import LabeledPeakCollection, LabeledPeak, LabeledPeakCluster
+# Allows to surpass the hardcoded limit in the number of points in the backend Agg
+rcParams['agg.path.chunksize'] = 1000
 
 
 def plot_class(axis: plt.axes, measurement_class: SyncMeasData, **kwargs):
@@ -71,8 +73,6 @@ def prepare_measurement_plot(measure_file: str = 'transrefl_hene_1s_10V_PMT5_rat
 
 
 if __name__ == '__main__':
-    # Allows to surpass the hardcoded limit in the number of points in the backend Agg
-    rcParams['agg.path.chunksize'] = 1000
     # Define file name to retrieve from predefined data path
     file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0'
     file_samp = 'samples_1s_10V_rate1300000.0'

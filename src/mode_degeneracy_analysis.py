@@ -35,7 +35,7 @@ def get_radius_estimate(cluster_array: List[LabeledPeakCluster], wavelength: flo
 if __name__ == '__main__':
     import math
     import matplotlib.pyplot as plt
-    from src.plot_npy import prepare_measurement_plot
+    from src.plot_functions import prepare_measurement_plot
     from src.peak_identifier import identify_peaks
     from src.peak_relation import get_converted_measurement_data
     from src.peak_normalization import NormalizedPeakCollection, NormalizedPeakCluster

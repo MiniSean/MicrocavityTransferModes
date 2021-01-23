@@ -14,6 +14,7 @@
 
 if __name__ == '__main__':
     from src.import_data import FileToMeasData
+    from src.plot_functions import plot_peak_identification
 
     # Data file reference (Import data)
     file_path = 'data/Trans/20210104'  # Directory path from project root (Optional)

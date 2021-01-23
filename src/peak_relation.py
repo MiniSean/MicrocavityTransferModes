@@ -329,7 +329,7 @@ def get_slice_range(data_slice: Tuple[int, int]) -> int:
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    from src.plot_npy import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class
+    from src.plot_functions import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class, plot_cluster_collection
     from src.peak_identifier import identify_noise_ceiling
 
     temp = []

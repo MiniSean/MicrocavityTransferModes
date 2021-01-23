@@ -103,7 +103,7 @@ class NormalizedPeakCollection(LabeledPeakCollection):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    from src.plot_npy import prepare_measurement_plot
+    from src.plot_functions import prepare_measurement_plot
     from src.peak_identifier import identify_peaks
     from src.peak_relation import get_converted_measurement_data
     # Construct measurement class

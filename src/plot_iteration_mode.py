@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm  # For displaying for-loop process to console
-from src.plot_npy import get_standard_axis
+from src.plot_functions import get_standard_axis
 from src.peak_relation import LabeledPeakCollection, LabeledPeak, get_converted_measurement_data, get_value_to_data_slice, get_slice_range, flatten_clusters, find_nearest_index
 from src.peak_normalization import NormalizedPeakCollection
 from src.plot_polarized_mode import plot_isolated_long_mode

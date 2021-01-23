@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 from mpl_toolkits.mplot3d import Axes3D
 from typing import List, Union
-from src.plot_npy import get_standard_axis, plot_class, plot_peak_collection, plot_cluster_collection
+from src.plot_functions import get_standard_axis, plot_class, plot_peak_collection, plot_cluster_collection
 from src.import_data import SyncMeasData, FileToMeasData
 from src.peak_identifier import identify_peaks
 from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, flatten_clusters, get_slice_range, get_converted_measurement_data
@@ -131,7 +131,7 @@ def plot_3d_sequence(data_classes: List[SyncMeasData], long_mode: int, trans_mod
 
 
 if __name__ == '__main__':
-    from src.plot_npy import prepare_measurement_plot
+    from src.plot_functions import prepare_measurement_plot
 
     # Reference files
     file_samp = 'samples_0_3s_10V_rate1300000.0'  # 'samples_1s_10V_rate1300000.0'
