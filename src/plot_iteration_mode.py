@@ -32,7 +32,7 @@ def get_focused_overlap(axis: plt.axes, collection_classes: List[NormalizedPeakC
 def get_matching_overlap(axis: plt.axes, collection_classes: List[NormalizedPeakCollection], long_mode: int, trans_mode: Union[int, None]) -> plt.axes:
     def get_normalized_cluster_pos(collection: NormalizedPeakCollection) -> float:
         _cluster = collection.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode)
-        _norm_pos = _cluster[0][-1].get_norm_x  # np.mean([peak.get_norm_x for peak in _cluster[0]])
+        _norm_pos = _cluster[0][0].get_norm_x  # np.mean([peak.get_norm_x for peak in _cluster[0]])
         return _norm_pos
 
     reference_norm_pos = get_normalized_cluster_pos(collection=collection_classes[0])
@@ -254,10 +254,11 @@ if __name__ == '__main__':
     from src.peak_identifier import identify_peaks
 
     # Reference files
-    file_samp = 'samples_0_3s_10V_rate1300000.0'  # 'samples_1s_10V_rate1300000.0'
+    file_samp = 'samples_1s_10V_rate1300000.0'  # 'samples_1s_10V_rate1300000.0'
 
     def file_fetch_function(iteration: int, polarization: int) -> Union[str, FileNotFoundError]:
-        _filename = 'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration{}_pol{:0=2d}0'.format(iteration, polarization)
+        # _filename = 'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration{}_pol{:0=2d}0'.format(iteration, polarization)
+        _filename = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration{}'.format(iteration)
         try:
             import_npy(filename=_filename)
         except FileNotFoundError:
