@@ -1,17 +1,19 @@
 import numpy as np
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple
 from scipy.signal import find_peaks, peak_prominences
 from src.import_data import SyncMeasData
 
 
 class PeakData(float):
+    """
+    Points to a specific location in the data where a significant peak in the data is identified.
+    """
 
     def __new__(cls, data: SyncMeasData, index: int, *args, **kwargs):
         value = data.y_data[index]
         return float.__new__(cls, value)
 
     def __init__(self, data: SyncMeasData, index: int):
-        # (self, loc: float, height: float)
         self._data = data
         self._raw_index = index
         self._index_pointer = self._data.slicer[0] + index
@@ -19,25 +21,30 @@ class PeakData(float):
 
     @property
     def relevant(self) -> bool:
+        """Returns True if pointer is within the slice range of the data container."""
         return self._data.inside_global_slice_range(self._index_pointer)
 
     @property
     def get_x(self) -> float:
+        """Returns the (converted) x value pointer within the data."""
         return self._data.x_boundless_data[self._index_pointer]
 
     @property
     def get_y(self) -> float:
+        """Returns the y value pointer within the data."""
         return self._data.y_boundless_data[self._index_pointer]
 
     @property
     def get_relative_index(self) -> int:
+        """Returns the relative index of the pointer location within the slice array."""
         return self._index_pointer - self._data.slicer[0]
-
-    def get_x_offset(self, offset_index: int):
-        return self._data.x_boundless_data[self._index_pointer + offset_index]
 
 
 class PeakCollection:
+    """
+    Array collection of PeakData class.
+    """
+
     def __init__(self, collection: List[PeakData]):
         self._list = collection
         self._global_offset = 0  # Temp
@@ -78,32 +85,3 @@ def identify_peak_dirty(meas_data: SyncMeasData, cutoff: float = 0.4) -> PeakCol
 def identify_peak_prominence(meas_data: SyncMeasData) -> Tuple[np.ndarray, np.ndarray]:
     all_peaks_above_noise = find_peaks(x=meas_data.y_data)[0]
     return peak_prominences(x=meas_data.y_data, peaks=all_peaks_above_noise)
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    from src.plot_npy import prepare_measurement_plot, plot_class
-    # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000')
-    # Optional, define data_slice
-    # data_slice = (1050000, 1150000)
-    # measurement_class.slicer = data_slice  # Zooms in on relevant data part
-    # Collect peaks
-    peak_collection = identify_peaks(measurement_class)
-
-    # data_slice = (1090000, 1120000)
-    # measurement_class.slicer = data_slice  # Zooms in on relevant data part
-    # Apply axis draw/modification
-    ax = plot_class(axis=ax, measurement_class=measurement_class)
-
-    # Draw peak v-lines
-    print(len(peak_collection))
-    for i, peak_data in enumerate(peak_collection):
-        if i > 1000:  # safety break
-            break
-        if peak_data.relevant:
-            ax.plot(peak_data.get_x, peak_data.get_y, 'x', color='r', alpha=1)
-        # ax.axvline(x=peak_data.get_x, ymax=peak_data.get_y, color='r', alpha=1)
-
-    # Show
-    plt.show()

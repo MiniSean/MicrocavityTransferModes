@@ -72,6 +72,16 @@ def prepare_measurement_plot(measure_file: str = 'transrefl_hene_1s_10V_PMT5_rat
     return result_axis, result_class
 
 
+def plot_peak_identification(collection: PeakCollection, meas_class: SyncMeasData) -> plt.axes:
+    # Store plot figure and axis
+    _, _ax = plt.subplots()
+    _ax = plot_class(axis=_ax, measurement_class=meas_class)
+    for i, peak_data in enumerate(collection):
+        if peak_data.relevant:
+            _ax.plot(peak_data.get_x, peak_data.get_y, 'x', color='r', alpha=1)
+    return _ax
+
+
 if __name__ == '__main__':
     # Define file name to retrieve from predefined data path
     file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0'
