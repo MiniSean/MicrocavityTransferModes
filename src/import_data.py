@@ -93,8 +93,8 @@ class SyncMeasData:
 
 class FileToMeasData(SyncMeasData):
 
-    def __init__(self, meas_file: str, samp_file: str):
-        super().__init__(import_npy(meas_file)[0], import_npy(samp_file))
+    def __init__(self, meas_file: str, samp_file: str, filepath: str = DATA_DIR):
+        super().__init__(import_npy(meas_file, filepath)[0], import_npy(samp_file, filepath))
 
 
 def import_npy(filename: str, filepath: str = DATA_DIR) -> np.ndarray:
