@@ -249,8 +249,8 @@ if __name__ == '__main__':
     y_mean = np.mean(y_values)
     y_rms = np.sqrt(np.sum((y_values - y_mean)**2) / len(y_values))
     ax2.axhline(y=y_mean, ls='--', color='darkorange')
-    ax2.axhline(y=y_mean+y_rms, ls='--', color='orange', label=f'Upper: {round(y_mean+y_rms, 2)} [nm]')
-    ax2.axhline(y=y_mean-y_rms, ls='--', color='orange', label=f'Lower: {round(y_mean-y_rms, 2)} [nm]')
+    ax2.axhline(y=y_mean+y_rms, ls='--', color='orange', label=r'$\mu + \sigma$' + f': {round(y_mean+y_rms, 2)} [nm]')
+    ax2.axhline(y=y_mean-y_rms, ls='--', color='orange', label=r'$\mu - \sigma$' + f': {round(y_mean-y_rms, 2)} [nm]')
 
     # plt.tight_layout(pad=.01)
     plt.legend()
