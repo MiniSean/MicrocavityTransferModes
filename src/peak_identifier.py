@@ -62,7 +62,6 @@ def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
     peak_prominence = identify_peak_prominence(meas_data)[0]  # Average peak prominence
     cutoff_prominence = np.mean(peak_prominence) + 0.30 * np.std(peak_prominence)  # TODO: Hardcoded peak prominence cutoff
     peak_indices, properties = find_peaks(x=meas_data.y_data, prominence=cutoff_prominence, distance=3)  # Arbitrary distance value
-    # , height=identify_noise_ceiling(meas_data)
     peak_collection = PeakCollection([PeakData(data=meas_data, index=i) for i in peak_indices])
     return peak_collection
 
@@ -72,20 +71,12 @@ def identify_peak_dirty(meas_data: SyncMeasData, cutoff: float = 0.4) -> PeakCol
     peak_prominence = identify_peak_prominence(meas_data)[0]  # Average peak prominence
     cutoff_prominence = np.mean(peak_prominence) + cutoff * np.std(peak_prominence)  # TODO: Hardcoded peak prominence cutoff
     peak_indices, properties = find_peaks(x=meas_data.y_data, prominence=cutoff_prominence, distance=1)  # Arbitrary distance value
-    # , height=identify_noise_ceiling(meas_data)
     peak_collection = PeakCollection([PeakData(data=meas_data, index=i) for i in peak_indices])
     return peak_collection
 
 
-# Legacy
-def identify_noise_ceiling(meas_data: SyncMeasData) -> float:
-    mean = np.mean(meas_data.y_boundless_data)
-    std = np.std(meas_data.y_boundless_data)
-    return .002  #mean + .24 * std  # TODO: still hardcoded. Need to find a satisfying way of representing noise ceiling
-
-
 def identify_peak_prominence(meas_data: SyncMeasData) -> Tuple[np.ndarray, np.ndarray]:
-    all_peaks_above_noise = find_peaks(x=meas_data.y_data)[0]  # , height=identify_noise_ceiling(meas_data)
+    all_peaks_above_noise = find_peaks(x=meas_data.y_data)[0]
     return peak_prominences(x=meas_data.y_data, peaks=all_peaks_above_noise)
 
 
@@ -97,9 +88,6 @@ if __name__ == '__main__':
     # Optional, define data_slice
     # data_slice = (1050000, 1150000)
     # measurement_class.slicer = data_slice  # Zooms in on relevant data part
-
-    # Collect noise ground level
-    noise_ceiling = identify_noise_ceiling(measurement_class)
     # Collect peaks
     peak_collection = identify_peaks(measurement_class)
 
@@ -108,8 +96,6 @@ if __name__ == '__main__':
     # Apply axis draw/modification
     ax = plot_class(axis=ax, measurement_class=measurement_class)
 
-    # Draw noise h-lines
-    ax.axhline(y=noise_ceiling, color='r')
     # Draw peak v-lines
     print(len(peak_collection))
     for i, peak_data in enumerate(peak_collection):

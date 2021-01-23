@@ -374,12 +374,8 @@ if __name__ == '__main__':
 
     ax = plot_specific_peaks(axis=ax, data=labeled_collection, long_mode=None, trans_mode=0)
 
-    # Draw noise h-lines
-    noise_ceiling = identify_noise_ceiling(measurement_class)
-    ax.axhline(y=noise_ceiling, color='r')
-
-    for value in temp:
-        ax.axvline(x=value, color='r')
+    # for value in temp:
+    #     ax.axvline(x=value, color='r')
 
     # Show
     # ax2.legend()
