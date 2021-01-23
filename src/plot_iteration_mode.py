@@ -116,7 +116,7 @@ def get_polarized_comparison(filename_func: Callable[[int, int], Union[str, File
         _norm_peaks = []
         for collection in _identified_peaks:
             try:
-                normalaized_data = NormalizedPeakCollection(optical_mode_collection=collection)
+                normalaized_data = NormalizedPeakCollection(transmission_peak_collection=collection)
             except IndexError:  # Sneaky catch for improper normalization (self._get_data_class)
                 print(f'Skipped data')
                 continue
@@ -266,31 +266,33 @@ if __name__ == '__main__':
 
     long_mode = 0
     trans_mode = 1
-    get_polarized_comparison(filename_func=file_fetch_function, sample_file=file_samp, long_mode=long_mode, trans_mode=trans_mode)
+    # get_polarized_comparison(filename_func=file_fetch_function, sample_file=file_samp, long_mode=long_mode, trans_mode=trans_mode)
 
-    # # Measurement files
-    # # f'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration{i}_pol000'
-    # filenames = [file_fetch_function(iteration=i, polarization=0) for i in range(10)]
-    #
-    # meas_iterations = [get_converted_measurement_data(FileToMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
-    # identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
-    # labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
-    # norm_peaks = [NormalizedPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
-    #
-    # mean_std_diff_array = get_peak_differences(collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
-    # for i, (mean, std) in enumerate(mean_std_diff_array):
-    #     print(f'Peak difference {i}-{i+1}: mean = {round(mean, 4)}[nm], std = {round(std, 4)}[nm]')
-    # mean_std_height_array = get_peak_height(collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
-    # for i, (mean, std) in enumerate(mean_std_height_array):
-    #     print(f'Peak height {i}: mean = {round(mean, 4)}[Transmission], std = {round(std, 4)}[Transmission]')
-    #
-    # fig, ax = plt.subplots()
-    # ax = get_free_overlap(axis=ax, collection_classes=labeled_peaks, long_mode=long_mode, trans_mode=trans_mode)
-    # ax.set_title(f'Free overlap (q* = {long_mode}, m+n = {trans_mode})')
-    # fig2, ax2 = plt.subplots()
-    # ax2 = get_focused_overlap(axis=ax2, collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
-    # ax2.set_title(f'Focused overlap (q* = {long_mode}, m+n = {trans_mode})')
-    # fig3, ax3 = plt.subplots()
-    # ax3 = get_matching_overlap(axis=ax3, collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
-    # ax3.set_title(f'Matched overlap (q* = {long_mode}, m+n = {trans_mode})')
+    # Measurement files
+    # f'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration{i}_pol000'
+    max_iter = 300
+    last_max_count = 10
+    filenames = [file_fetch_function(iteration=i, polarization=0) for i in range(max_iter - last_max_count, max_iter)]
+
+    meas_iterations = [get_converted_measurement_data(FileToMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
+    identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
+    labeled_peaks = [LabeledPeakCollection(transmission_peak_collection=collection) for collection in identified_peaks]
+    norm_peaks = [NormalizedPeakCollection(transmission_peak_collection=collection) for collection in identified_peaks]
+
+    mean_std_diff_array = get_peak_differences(collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
+    for i, (mean, std) in enumerate(mean_std_diff_array):
+        print(f'Peak difference {i}-{i+1}: mean = {round(mean, 4)}[nm], std = {round(std, 4)}[nm]')
+    mean_std_height_array = get_peak_height(collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
+    for i, (mean, std) in enumerate(mean_std_height_array):
+        print(f'Peak height {i}: mean = {round(mean, 4)}[Transmission], std = {round(std, 4)}[Transmission]')
+
+    fig, ax = plt.subplots()
+    ax = get_free_overlap(axis=ax, collection_classes=labeled_peaks, long_mode=long_mode, trans_mode=trans_mode)
+    ax.set_title(f'Free overlap (q* = {long_mode}, m+n = {trans_mode})')
+    fig2, ax2 = plt.subplots()
+    ax2 = get_focused_overlap(axis=ax2, collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
+    ax2.set_title(f'Focused overlap (q* = {long_mode}, m+n = {trans_mode})')
+    fig3, ax3 = plt.subplots()
+    ax3 = get_matching_overlap(axis=ax3, collection_classes=norm_peaks, long_mode=long_mode, trans_mode=trans_mode)
+    ax3.set_title(f'Matched overlap (q* = {long_mode}, m+n = {trans_mode})')
     plt.show()

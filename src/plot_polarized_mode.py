@@ -142,7 +142,7 @@ if __name__ == '__main__':
 
     meas_iterations = [get_converted_measurement_data(FileToMeasData(meas_file=file_meas, samp_file=file_samp)) for file_meas in filenames]
     identified_peaks = [identify_peaks(meas_data=data) for data in meas_iterations]
-    labeled_peaks = [LabeledPeakCollection(optical_mode_collection=collection) for collection in identified_peaks]
+    labeled_peaks = [LabeledPeakCollection(transmission_peak_collection=collection) for collection in identified_peaks]
 
     trans_mode = 2
     long_mode = 0

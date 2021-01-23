@@ -93,8 +93,8 @@ class LabeledPeakCluster(PeakCluster):
 
 
 class LabeledPeakCollection(PeakCollection):
-    def __init__(self, optical_mode_collection: PeakCollection):
-        self._mode_clusters = self._set_labeled_clusters(optical_mode_collection)  # Pre sample conversion
+    def __init__(self, transmission_peak_collection: PeakCollection):
+        self._mode_clusters = self._set_labeled_clusters(transmission_peak_collection)  # Pre sample conversion
         super().__init__(flatten_clusters(data=self._mode_clusters))
         self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
 

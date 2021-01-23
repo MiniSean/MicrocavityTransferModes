@@ -90,7 +90,7 @@ def export_video_intensity(filename: str, update_capture_images: bool, build_vid
     # Create data object
     data_class = SyncMeasData(data_array=data_array, samp_array=np.arange(len(storage)))
     peak_collection = identify_peak_dirty(meas_data=data_class, cutoff=0.1)  # TODO: Hardcoded peak identification prominence
-    peak_collection = LabeledPeakCollection(optical_mode_collection=peak_collection)
+    peak_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection)
     print(f'Number of high intensity peaks detected: {len(peak_collection)}')
     plot_peaks(plt, peak_collection)
 
