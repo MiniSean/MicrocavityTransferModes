@@ -9,7 +9,9 @@ CLUSTER_SEPARATION = 0.1  # [0, 2]: Minimum distance value between peaks within 
 
 
 class LabeledPeak(PeakData):
-    """PeakData with additional longitudinal and transverse mode labels"""
+    """
+    PeakData with additional longitudinal and transverse mode labels.
+    """
 
     def __new__(cls, peak: PeakData, **kwargs):
         value = peak._data.y_data[peak._raw_index]
@@ -22,14 +24,20 @@ class LabeledPeak(PeakData):
 
     @property
     def get_longitudinal_mode_id(self) -> int:
+        """Returns longitudinal mode number."""
         return self._long_mode
 
     @property
     def get_transverse_mode_id(self) -> int:
+        """Returns transverse mode number."""
         return self._trans_mode
 
 
 class PeakCluster:
+    """
+    Groups PeakData into a single mode cluster
+    """
+
     def __init__(self, data: List[PeakData]):
         self._list = data
 
@@ -78,6 +86,10 @@ class PeakCluster:
 
 
 class LabeledPeakCluster(PeakCluster):
+    """
+    PeakCluster with additional longitudinal and transverse mode labels.
+    """
+
     def __init__(self, data: List[PeakData], long_mode: int, trans_mode: int):
         super().__init__([LabeledPeak(peak=peak, long_mode=long_mode, trans_mode=trans_mode) for peak in data])
         self._long_mode = long_mode
@@ -85,35 +97,48 @@ class LabeledPeakCluster(PeakCluster):
 
     @property
     def get_longitudinal_mode_id(self) -> int:
+        """Returns longitudinal mode number."""
         return self._long_mode
 
     @property
     def get_transverse_mode_id(self) -> int:
+        """Returns transverse mode number."""
         return self._trans_mode
 
 
 class LabeledPeakCollection(PeakCollection):
+    """
+    Array collection of LabeledPeak class.
+    Contains array of LabeledPeakCluster classes containing the LabeledPeak class.
+    Contains dictionary with estimated (m + n = -1) or (planar) mode.
+    """
+
     def __init__(self, transmission_peak_collection: PeakCollection):
         self._mode_clusters = self._set_labeled_clusters(transmission_peak_collection)  # Pre sample conversion
         super().__init__(flatten_clusters(data=self._mode_clusters))
         self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
 
     def _set_labeled_clusters(self, optical_mode_collection: Union[List[PeakData], PeakCollection]) -> List[LabeledPeakCluster]:
+        """
+        Orders and labels the provided array of PeakData classes.
+        :param optical_mode_collection: Array of PeakData.
+        :return: Array of LabeledPeakCluster.
+        """
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
         # Overlap separation
-        for mode in mode_clusters:
-            peak_height = sorted([peak.get_y for peak in mode], key=lambda x: -x)
-            peak_height_distances = [peak_height[i] - peak_height[i + 1] for i in range(len(peak_height) - 1)]
-            if len(peak_height_distances) < 2:
-                continue
-
-            mean = np.mean(peak_height_distances)
-            std = np.std(peak_height_distances)
-            cut_off = (mean + 2.5 * std)
-            outlier_indices = LabeledPeakCollection._get_outlier_indices(values=peak_height_distances, cut_off=cut_off)
-            if len(outlier_indices) > 0:
-                print(mode.get_avg_x, len(outlier_indices))
-                temp.append(mode.get_avg_x)
+        # for mode in mode_clusters:
+        #     peak_height = sorted([peak.get_y for peak in mode], key=lambda x: -x)
+        #     peak_height_distances = [peak_height[i] - peak_height[i + 1] for i in range(len(peak_height) - 1)]
+        #     if len(peak_height_distances) < 2:
+        #         continue
+        #
+        #     mean = np.mean(peak_height_distances)
+        #     std = np.std(peak_height_distances)
+        #     cut_off = (mean + 2.5 * std)
+        #     outlier_indices = LabeledPeakCollection._get_outlier_indices(values=peak_height_distances, cut_off=cut_off)
+        #     if len(outlier_indices) > 0:
+        #         print(mode.get_avg_x, len(outlier_indices))
+        #         temp.append(mode.get_avg_x)
 
         sort_key = mode_clusters[0][0]._data.sort_key  # Cluster sorting key (Small-to-Large [nm] or Large-to-Small [V])
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
@@ -152,8 +177,8 @@ class LabeledPeakCollection(PeakCollection):
         """
         Creates a dictionary for estimated m+n=-1 modes.
         These clusters consists of predicted peak positions based on all transverse modes in the relevant longitudinal mode.
-        :param cluster_array: All identified clusters within the data
-        :return: Dict[ longitudinal mode, (m+n=-1) peak cluster ]
+        :param cluster_array: All identified clusters within the data.
+        :return: Dict[ longitudinal mode, (m+n=-1) peak cluster ].
         """
         result = {}
         data_class = self._get_data_class
@@ -175,6 +200,13 @@ class LabeledPeakCollection(PeakCollection):
         return result
 
     def get_labeled_clusters(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeakCluster]:
+        """
+        Returns labeled clusters filtered by longitudinal or transverse mode identity.
+        When either long_mode or trans_mode is parsed with None, all the respective mode identities are filtered.
+        :param long_mode: Int of longitudinal identity.
+        :param trans_mode: Int of transverse identity.
+        :return: Array of LabeledPeakClusters corresponding to the filter requirements.
+        """
         result = []
 
         def filter_func(cluster: LabeledPeakCluster):  # Filter function for specific mode label
@@ -187,15 +219,21 @@ class LabeledPeakCollection(PeakCollection):
         return result
 
     def get_labeled_peaks(self, long_mode: Union[int, None], trans_mode: Union[int, None]) -> List[LabeledPeak]:
-        """The referred labeled clusters contain labeled peaks by definition"""
+        """
+        Returns labeled peaks filtered by longitudinal or transverse mode identity.
+        When either long_mode or trans_mode is parsed with None, all the respective mode identities are filtered.
+        :param long_mode: Int of longitudinal identity.
+        :param trans_mode: Int of transverse identity.
+        :return: Array of LabeledPeak corresponding to the filter requirements.
+        """
         return flatten_clusters(data=self.get_labeled_clusters(long_mode=long_mode, trans_mode=trans_mode))
 
     def get_mode_sequence(self, long_mode: int, trans_mode: Union[int, None] = None) -> Tuple[List[LabeledPeakCluster], Tuple[float, float]]:
         """
-        Determines the data_slice bounds in which the requested longitudinal mode exists compared to its successor.
-        :param long_mode: Requested longitudinal mode number
-        :param trans_mode: Requested transverse mode number
-        :return: Tuple( All clusters corresponding to longitudinal mode, data_slice boundary in arbitrary cavity space units)
+        Determines the data_slice bounds of the FSR corresponding to the longitudinal mode identity.
+        :param long_mode: Int of longitudinal identity.
+        :param trans_mode: Int of transverse identity.
+        :return: Tuple( All clusters corresponding to longitudinal mode, data_slice boundary in arbitrary cavity space units).
         """
         if trans_mode is None:  # Sequence entire longitudinal mode slice
             # Create sequence data_slice
@@ -210,16 +248,15 @@ class LabeledPeakCollection(PeakCollection):
 
     def get_q_estimate(self, long_mode: int) -> List[float]:
         """
-        Predicts m+n=-1 mode based on higher order transverse mode locations
-        :param long_mode: Specific longitudinal mode to search for relevant transverse modes
-        :return: List[ positions depending on all relevant transverse modes ]
+        Predicts m+n=-1 mode based on higher order transverse mode locations.
+        :param long_mode: Specific longitudinal mode to search for relevant transverse modes.
+        :return: List[ positions depending on all relevant transverse modes ].
         """
         sequence = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
         if len(sequence) < 2:
             raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
         max_range = len(sequence) - 1
         distances = [sequence[i + 1].get_avg_x - sequence[i].get_avg_x for i in range(max_range)]
-        # distances = [sequence[1].get_avg_x - sequence[0].get_avg_x]  # Only relative to first transverse mode
         return [sequence[0].get_avg_x - dist for dist in distances]
 
     def get_measurement_data_slice(self, union_slice: Union[Tuple[float, float], Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray]:
@@ -241,9 +278,7 @@ class LabeledPeakCollection(PeakCollection):
         distances = [(cluster_data[i + 1] - cluster_data[i]) for i in range(len(cluster_data) - 1)]
         mean = np.mean(distances)
         std = np.std(distances)
-        # print(max(distances) - min(distances))  # 0.2497
-        # print(.24 * (mean + 2 * std))  # 0.0409
-        cut_off = mean + CLUSTER_SEPARATION * std  # 0.24 * (mean + 2 * std)  # TODO: Hardcoded cluster separation
+        cut_off = mean + CLUSTER_SEPARATION * std  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
         outlier_indices = LabeledPeakCollection._get_outlier_indices(values=distances, cut_off=cut_off)
         # Construct cluster splitting
@@ -252,20 +287,25 @@ class LabeledPeakCollection(PeakCollection):
 
     @staticmethod
     def _get_outlier_indices(values: List[float], cut_off: float) -> List[int]:
+        """Filters all values bellow cut_off threshold."""
         return [i for i, value in enumerate(values) if abs(value) > cut_off]
 
     @property
     def _get_data_class(self) -> SyncMeasData:
+        """
+        Returns measurement data class of first PeakData in first PeakCluster.
+        Which is the same as all other PeakData inside the collection.
+        """
         return self._mode_clusters[0][0]._data
 
     @property
     def get_clusters(self) -> List[LabeledPeakCluster]:
-        """Returns a list of pre-calculated mode clusters"""
+        """Returns a list of pre-calculated mode clusters."""
         return self._mode_clusters
 
     @property
     def get_q_clusters(self) -> List[LabeledPeakCluster]:
-        """Returns a list of q (m + n = -1) clusters"""
+        """Returns a list of q (m + n = -1) clusters."""
         result = []
         for q_long_id, q_cluster in self.q_dict.items():
             result.append(q_cluster)
@@ -283,6 +323,7 @@ class LabeledPeakCollection(PeakCollection):
 
 
 def get_piezo_response(meas_class: SyncMeasData) -> Callable[[np.ndarray], np.ndarray]:
+    """Returns the fitted piezo-voltage to cavity-length response."""
     from src.sample_conversion import fit_piezo_response
     initial_labeling = LabeledPeakCollection(identify_peaks(meas_class))
     # Set voltage conversion function
@@ -290,19 +331,15 @@ def get_piezo_response(meas_class: SyncMeasData) -> Callable[[np.ndarray], np.nd
 
 
 def get_converted_measurement_data(meas_class: SyncMeasData) -> SyncMeasData:
+    """Returns updated meas_class with converted sample (x-axis) data."""
     # Set voltage conversion function
     response_func = get_piezo_response(meas_class=meas_class)
     meas_class.set_voltage_conversion(conversion_function=response_func)
     return meas_class
 
 
-def get_cluster_offset(base_observer: LabeledPeakCollection, target_observer: LabeledPeakCollection) -> float:
-    cluster_mean_base = base_observer.get_clusters_avg_x
-    cluster_mean_target = target_observer.get_clusters_avg_x
-    return np.mean([base - target for base, target in zip(cluster_mean_base, cluster_mean_target)])
-
-
 def flatten_clusters(data: List[PeakCluster]) -> List[PeakData]:
+    """Returns a flattened array of PeakData from list of PeakClusters."""
     result = []
     for cluster in data:
         for peak in cluster:
@@ -310,7 +347,8 @@ def flatten_clusters(data: List[PeakCluster]) -> List[PeakData]:
     return result
 
 
-def find_nearest_index(array: np.ndarray, value: float) -> int: # Assumes data is sorted
+def find_nearest_index(array: np.ndarray, value: float) -> int:  # Assumes data is sorted
+    """Returns nearest index of closest array-value to value."""
     index = np.searchsorted(array, value, side="left")
     if index > 0 and (index == len(array) or abs(value - array[index-1]) < abs(value - array[index])):
         return index-1
@@ -319,64 +357,10 @@ def find_nearest_index(array: np.ndarray, value: float) -> int: # Assumes data i
 
 
 def get_value_to_data_slice(data_class: SyncMeasData, value_slice: Tuple[float, float]) -> Tuple[int, int]:
-    """Transforms arbitrary value data_slice into index specific data_slice"""
+    """Transforms arbitrary value_slice into index specific data_slice"""
     return find_nearest_index(array=data_class.x_boundless_data, value=value_slice[0]), find_nearest_index(array=data_class.x_boundless_data, value=value_slice[1])
 
 
 def get_slice_range(data_slice: Tuple[int, int]) -> int:
+    """Returns length of data_slice."""
     return abs(data_slice[0] - data_slice[1])
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    from src.plot_functions import prepare_measurement_plot, plot_specific_peaks, plot_peak_collection, plot_class, plot_cluster_collection
-    from src.peak_identifier import identify_noise_ceiling
-
-    temp = []
-    # # Temp
-    # from src.structural_analysis import MeasurementAnalysis
-    # analysis = MeasurementAnalysis(meas_file='transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000', samp_file='samples_0_3s_10V_rate1300000.0', scan_file=None)
-    # print(analysis)
-
-    # Construct measurement class
-    ax, measurement_class = prepare_measurement_plot('transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0')
-    ax2, measurement_class2 = prepare_measurement_plot('transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0')
-    #     # Optional, define data_slice
-    # data_slice = (1050000, 1150000)
-    # measurement_class.slicer = data_slice  # Zooms in on relevant data part
-    # measurement_class2.slicer = data_slice
-
-    # Collect peaks
-    # measurement_class = get_converted_measurement_data(meas_class=measurement_class)
-    labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
-    print(len(labeled_collection))
-
-    # Plot measurement
-    ax = plot_class(axis=ax, measurement_class=measurement_class)
-    # ax2 = plot_class(axis=ax2, measurement_class=measurement_class2)
-
-    # Plot peak collection
-    # ax = plot_peak_collection(axis=ax, data=peak_collection_itt0)  # All peaks
-
-    cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=0)
-    data_slice = get_value_to_data_slice(measurement_class, value_slice)
-
-    ax = plot_cluster_collection(axis=ax, data=labeled_collection)
-
-    ax.axvline(x=value_slice[0], color='r', alpha=1)
-    ax.axvline(x=value_slice[1], color='g', alpha=1)
-
-    measurement_class.slicer = data_slice
-    ax2 = plot_class(axis=ax2, measurement_class=measurement_class)
-    # cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=0, trans_mode=1)
-    for cluster in cluster_array:
-        ax2 = plot_peak_collection(axis=ax2, data=cluster)
-
-    ax = plot_specific_peaks(axis=ax, data=labeled_collection, long_mode=None, trans_mode=0)
-
-    # for value in temp:
-    #     ax.axvline(x=value, color='r')
-
-    # Show
-    # ax2.legend()
-    plt.show()

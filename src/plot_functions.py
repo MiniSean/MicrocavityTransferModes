@@ -49,6 +49,8 @@ def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollect
 
 def plot_cluster_collection(axis: plt.axes, data: Union[List[LabeledPeakCluster], LabeledPeakCollection]) -> plt.axes:
     for cluster in (data if isinstance(data, list) else data.get_clusters):
+        if cluster.get_transverse_mode_id == 0:
+            plt.gca().set_prop_cycle(None)
         axis = plot_peak_collection(axis=axis, data=cluster, label=f'n+m={cluster.get_transverse_mode_id}')
         axis.text(x=cluster.get_avg_x, y=cluster.get_max_y, s=f'({cluster.get_longitudinal_mode_id}, {cluster.get_transverse_mode_id})', fontsize=8, horizontalalignment='center', verticalalignment='bottom')
     return axis
@@ -79,6 +81,19 @@ def plot_peak_identification(collection: PeakCollection, meas_class: SyncMeasDat
     for i, peak_data in enumerate(collection):
         if peak_data.relevant:
             _ax.plot(peak_data.get_x, peak_data.get_y, 'x', color='r', alpha=1)
+    return _ax
+
+
+def plot_peak_relation(collection: LabeledPeakCollection, meas_class: SyncMeasData) -> plt.axes:
+    # Store plot figure and axis
+    _, _ax = plt.subplots()
+    _ax = plot_class(axis=_ax, measurement_class=meas_class)
+
+    # Determine mode sequence corresponding to first FSR
+    cluster_array, value_slice = collection.get_mode_sequence(long_mode=0)
+    _ax.axvline(x=value_slice[0], color='r', alpha=1)
+    _ax.axvline(x=value_slice[1], color='g', alpha=1)
+    _ax = plot_cluster_collection(axis=_ax, data=collection)
     return _ax
 
 

@@ -15,7 +15,7 @@
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from src.import_data import FileToMeasData
-    from src.plot_functions import plot_peak_identification
+    from src.plot_functions import plot_peak_identification, plot_peak_relation
 
     # Data file reference (Import data)
     file_path = 'data/Trans/20210104'  # Directory path from project root (Optional)
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     # Peak clustering and mode labeling
     from src.peak_relation import LabeledPeakCollection
     labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection)
+    plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
 
     # Normalized based on free-spectral-ranges (FSR)
     from src.peak_normalization import NormalizedPeakCollection
