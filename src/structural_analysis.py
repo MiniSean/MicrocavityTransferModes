@@ -8,17 +8,20 @@ from src.peak_normalization import NormalizedPeakCollection
 
 class MeasurementAnalysis:
 
-    def __init__(self, meas_file: str, samp_file: str, scan_file: Optional[str]):
+    def __init__(self, meas_file: str, samp_file: str, collection: Optional[NormalizedPeakCollection] = None):
         self._meas_file = meas_file
         self._samp_file = samp_file
-        self._scan_file = scan_file
-        # Construct synchronized measurement object
-        self._meas_data = get_converted_measurement_data(FileToMeasData(meas_file=meas_file, samp_file=samp_file))
-        self._peak_collection = NormalizedPeakCollection(identify_peaks(meas_data=self._meas_data))
+        if collection is None:
+            # Construct synchronized measurement object
+            self._meas_data = get_converted_measurement_data(FileToMeasData(meas_file=meas_file, samp_file=samp_file))
+            self._peak_collection = NormalizedPeakCollection(identify_peaks(meas_data=self._meas_data))
+        else:
+            self._peak_collection = collection
+            self._meas_data = collection._get_data_class
 
     def __str__(self):
         result = f'--Structural analysis of Transmission measurement---'
-        result += f'\n\n[File Info]:\nMeasurement: {self._meas_file}\nSampling: {self._samp_file}\nReference: {self._scan_file}'
+        result += f'\n\n[File Info]:\nMeasurement: {self._meas_file}\nSampling: {self._samp_file}'
         result += f'\n\n[Mode Identification Info]:\n{self.get_mode_info}'
         result += f'\n\n[Peak Identification Info]:\n{self.get_peak_info}'
         result += f'\n\n[Physical Info]:\n{self.get_physical_info}'
@@ -68,14 +71,3 @@ class MeasurementAnalysis:
         result = f'Average fundamental peak distance: \u03BB/2 = {round(avg_peak_dist, 2)} [nm] (\u03BB = {round(2 * avg_peak_dist, 2)} \u00B1 {round(2 * std_peak_dist, 2)} [nm])'
         result += f'\nPredicted first resonance mode: q = {round(_fundamental_only_cluster[0].get_avg_x / avg_peak_dist)}'
         return result
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    # File names
-    file_meas = 'transrefl_hene_0_3s_10V_PMT4_rate1300000.0itteration0_pol000'
-    file_samp = 'samples_0_3s_10V_rate1300000.0'
-    # Analysis object
-    analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, scan_file=None)
-    print(analysis_obj)
-    plt.show()

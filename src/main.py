@@ -19,6 +19,7 @@ from src.peak_relation import get_converted_measurement_data
 from src.peak_identifier import identify_peaks
 from src.peak_relation import LabeledPeakCollection
 from src.peak_normalization import NormalizedPeakCollection
+from src.structural_analysis import MeasurementAnalysis
 
 
 def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, None] = DATA_DIR):
@@ -44,6 +45,10 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
     # Estimate radius
     [radius_mean, offset], [radius_std, offset_std] = get_radius_estimate(cluster_array=labeled_collection.get_clusters, wavelength=633)
     plot_radius_estimate(collection=labeled_collection, radius_mean=radius_mean, offset=offset, radius_std=radius_std)  # Plot
+
+    # Analysis object
+    analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, collection=normalized_collection)
+    print(analysis_obj)
 
 
 def get_file_fetch_func(file_base_name: str, filepath: Union[str, None] = DATA_DIR):
@@ -80,10 +85,10 @@ def multi_source_analysis(meas_file_base: str, iter_count: Iterable[int], samp_f
 
     # Top-view measurement transmission comparison (with pin and focus selection)
     # pin/focus = ( longitudinal mode ID, transverse mode ID )
-    plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(1, 0), focus=[(1, 2)])  # Plot
+    plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(5, 0), focus=[(5, 2)])  # Plot
 
     # Side-view measurement transmission focus
-    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(0, 4))
+    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(5, 1))
 
 
 if __name__ == '__main__':

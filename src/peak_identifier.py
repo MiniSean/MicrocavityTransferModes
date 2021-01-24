@@ -2,6 +2,8 @@ import numpy as np
 from typing import List, Tuple
 from scipy.signal import find_peaks, peak_prominences
 from src.import_data import SyncMeasData
+# cutoff = mean + c * std
+PEAK_PROMINENCE = 0.3  # [0, 2]: Minimum peak-prominence value required to be detected
 
 
 class PeakData(float):
@@ -67,7 +69,7 @@ class PeakCollection:
 
 def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
     peak_prominence = identify_peak_prominence(meas_data)[0]  # Average peak prominence
-    cutoff_prominence = np.mean(peak_prominence) + 0.30 * np.std(peak_prominence)  # TODO: Hardcoded peak prominence cutoff
+    cutoff_prominence = np.mean(peak_prominence) + PEAK_PROMINENCE * np.std(peak_prominence)
     peak_indices, properties = find_peaks(x=meas_data.y_data, prominence=cutoff_prominence, distance=3)  # Arbitrary distance value
     peak_collection = PeakCollection([PeakData(data=meas_data, index=i) for i in peak_indices])
     return peak_collection
@@ -76,7 +78,7 @@ def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
 # Only for video analysis
 def identify_peak_dirty(meas_data: SyncMeasData, cutoff: float = 0.4) -> PeakCollection:
     peak_prominence = identify_peak_prominence(meas_data)[0]  # Average peak prominence
-    cutoff_prominence = np.mean(peak_prominence) + cutoff * np.std(peak_prominence)  # TODO: Hardcoded peak prominence cutoff
+    cutoff_prominence = np.mean(peak_prominence) + cutoff * np.std(peak_prominence)
     peak_indices, properties = find_peaks(x=meas_data.y_data, prominence=cutoff_prominence, distance=1)  # Arbitrary distance value
     peak_collection = PeakCollection([PeakData(data=meas_data, index=i) for i in peak_indices])
     return peak_collection
