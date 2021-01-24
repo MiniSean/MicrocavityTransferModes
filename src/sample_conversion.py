@@ -3,7 +3,7 @@ from scipy.optimize import curve_fit
 import logging
 from typing import Callable, Any, Iterator, List, Union
 import matplotlib.pyplot as plt
-from src.peak_relation import LabeledPeakCluster
+from src.peak_relation import LabeledPeakCluster, SAMPLE_WAVELENGTH
 FONT_SIZE = 20
 
 
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     collection_class = LabeledPeakCollection(identify_peaks(meas_data=data_class))
 
     cluster_collection = collection_class.get_q_clusters  # collection_class.get_clusters
-    piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=633)
+    piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=SAMPLE_WAVELENGTH)
     # piezo_response = fit_collection()
     # fit_variables = fit_calibration(voltage_array=data_class.samp_array, reference_transmission_array=import_npy(filename_base)[0], response_func=piezo_response)
     # print(f'TiSaph transmission: T = {1 - fit_variables[1]} (R = {fit_variables[1]})')
@@ -243,7 +243,7 @@ if __name__ == '__main__':
         collection_class = LabeledPeakCollection(identified_peaks)
 
         cluster_collection = collection_class.get_q_clusters  # collection_class.get_clusters
-        piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=633, verbose=True)
+        piezo_response = fit_piezo_response(cluster_collection=cluster_collection, sample_wavelength=SAMPLE_WAVELENGTH, verbose=True)
     # Obtain mean and root-mean-square
     y_values = [value for line in ax2.lines for value in line.get_ydata()]
     y_mean = np.mean(y_values)
