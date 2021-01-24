@@ -1,6 +1,10 @@
 # Basic requirements
+tqdm
+
 # Math
 numpy
+scipy
 
 # Visualisation
 matplotlib
+opencv-python

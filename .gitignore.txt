@@ -106,3 +106,10 @@ fabric.properties
 .idea/codestream.xml
 
 # End of https://www.toptal.com/developers/gitignore/api/intellij
+
+# Project specific ignore
+.data/Trans
+.data/ICCaptures
+.data/Docu
+
+.idea/*.xml

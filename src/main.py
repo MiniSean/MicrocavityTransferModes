@@ -1,87 +1,106 @@
-import numpy as np
-from typing import List, Callable
-import matplotlib.pyplot as plt
+#*************************************************************#
+#    Analytic tool for optical resonance transmission data    #
+#*************************************************************#
+#
+# Required data (transmission analysis)
+# - transmission array (shape: m x 1)
+# - sample (Voltage) array (shape: m x 1)
+# - (Optional) reference transmission array (shape: m x 1)
+#
+# Required data (far-field analysis)
+# - video file compatible with cv2 library (.mp4, .avi, etc.)
+#
+from src.import_data import FileToMeasData, DATA_DIR, import_npy
+from typing import Union, Iterable
+from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate
+from src.plot_iteration_mode_color import plot_pinned_focus_top, plot_pinned_focus_side
+from src.cavity_radius_analysis import get_radius_estimate
+from src.peak_relation import get_converted_measurement_data
+from src.peak_identifier import identify_peaks
+from src.peak_relation import LabeledPeakCollection
+from src.peak_normalization import NormalizedPeakCollection
 
 
-def quarter_phase_depth(resonance_wavelength: float, refraction_index: float):
-    return resonance_wavelength / (4 * refraction_index)
+def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, None] = DATA_DIR):
+    # Create measurement container instance
+    measurement_container = FileToMeasData(meas_file=meas_file, samp_file=samp_file, filepath=filepath)
+
+    # Apply voltage to length conversion
+    measurement_container = get_converted_measurement_data(meas_class=measurement_container)
+
+    # Peak Identification
+    peak_collection = identify_peaks(meas_data=measurement_container)
+    plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
+
+    # Peak clustering and mode labeling
+    labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection)
+    plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
+
+    # Normalized based on free-spectral-ranges (FSR)
+    normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
+    plot_peak_normalization_spectrum(collection=normalized_collection)  # Plot
+    plot_peak_normalization_overlap(collection=normalized_collection)  # Plot
+
+    # Estimate radius
+    [radius_mean, offset], [radius_std, offset_std] = get_radius_estimate(cluster_array=labeled_collection.get_clusters, wavelength=633)
+    plot_radius_estimate(collection=labeled_collection, radius_mean=radius_mean, offset=offset, radius_std=radius_std)  # Plot
 
 
-def planar_transfer_matrix(depth: float, n: float) -> Callable[[float], np.ndarray]:
-    """Returns lambda function depending on the wavelength"""
-    return lambda x: np.array([[np.cos(2*np.pi*n*depth / x), -(1j/n)*np.sin(2*np.pi*n*depth / x)],
-                               [-1j*n*np.sin(2*np.pi*n*depth / x), np.cos(2*np.pi*n*depth / x)]], dtype=complex)
+def get_file_fetch_func(file_base_name: str, filepath: Union[str, None] = DATA_DIR):
+    """Returns a function that accepts an interation index and tries to fetch the corresponding file."""
+
+    def file_fetch_function(iteration: int) -> Union[str, FileNotFoundError]:
+        _filename = file_base_name.format(iteration)
+        try:
+            import_npy(filename=_filename, filepath=filepath)
+        except FileNotFoundError:
+            raise FileNotFoundError(f'File ({_filename}) does not exist in pre-defined directory')
+        return _filename
+
+    return file_fetch_function
 
 
-def dielectric_layered_matrix(layers: int, n_1: float, n_2: float, resonance_wavelength: float) -> Callable[[float], np.ndarray]:
-    m_01 = planar_transfer_matrix(quarter_phase_depth(resonance_wavelength, n_1), n_1)
-    m_12 = planar_transfer_matrix(quarter_phase_depth(resonance_wavelength, n_2), n_2)
-
-    def layered_matrix(wavelength: float) -> np.ndarray:
-        result = np.identity(2)
-        for i in range(layers):
-            result = np.matmul(m_01(wavelength), result)
-            result = np.matmul(m_12(wavelength), result)
-        return result
-    return lambda x: layered_matrix(x)
-
-
-def layered_matrix(matrix_1: Callable[[float], np.ndarray], matrix_2: Callable[[float], np.ndarray], N: int) -> Callable[[float], np.ndarray]:
-    def layered_matrix(wavelength: float) -> np.ndarray:
-        result = np.identity(2)
-        for i in range(N):
-            result = np.matmul(matrix_1(wavelength), result)
-            result = np.matmul(matrix_2(wavelength), result)
-        return result
-    return lambda x: layered_matrix(x)
+def get_labeled_collection(meas_file_base: str, iter_count: Iterable[int], samp_file: str, filepath: Union[str, None] = DATA_DIR) -> Iterable[LabeledPeakCollection]:
+    """Returns Iterable for LabeledPeakCluster data."""
+    fetch_func = get_file_fetch_func(file_base_name=meas_file_base, filepath=filepath)
+    for i in iter_count:
+        try:
+            meas_file = fetch_func(iteration=i)
+            measurement_container = FileToMeasData(meas_file=meas_file, samp_file=samp_file, filepath=filepath)
+            measurement_container = get_converted_measurement_data(meas_class=measurement_container)
+            yield LabeledPeakCollection(transmission_peak_collection=identify_peaks(meas_data=measurement_container))
+        except FileNotFoundError:
+            continue
 
 
-def transfer_matrix_to_reflection(system_matrix: np.ndarray) -> float:
-    # a = system_matrix[1][1] + system_matrix[0][1]
-    # b = 1j*(system_matrix[1][1] - system_matrix[0][0])
-    # c = system_matrix[1][1] - system_matrix[0][1]
-    # d = 1j*(system_matrix[1][1] + system_matrix[0][0])
-    # result = (a + b) / (c + d)
-    e = system_matrix[0][0] + system_matrix[0][1]
-    f = system_matrix[1][0] + system_matrix[1][1]
-    result = (e - f) / (e + f)
-    return float(result * np.conj(result))
+def multi_source_analysis(meas_file_base: str, iter_count: Iterable[int], samp_file: str, filepath: Union[str, None] = DATA_DIR):
 
+    # Peak clustering and mode labeling
+    iterable_collections = list(get_labeled_collection(meas_file_base=meas_file_base, iter_count=iter_count, samp_file=samp_file, filepath=filepath))
 
-def plot_wavelength_vs_reflection():
-    resonance_wavelength = 640
-    x = np.linspace(-500, 500, 100)
-    x = resonance_wavelength + x  # x-axis scaling
-    # Settings
-    layers = 2
-    n_1 = 1.46
-    n_2 = 2.09
-    system_matrix_function = dielectric_layered_matrix(layers, n_1, n_2, resonance_wavelength)
-    y = [transfer_matrix_to_reflection(system_matrix_function(wavelength)) for wavelength in x]
+    # Top-view measurement transmission comparison (with pin and focus selection)
+    # pin/focus = ( longitudinal mode ID, transverse mode ID )
+    plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(1, 0), focus=[(1, 2)])  # Plot
 
-    plt.plot(x, y)
-    plt.grid(True)
-    plt.show()
+    # Side-view measurement transmission focus
+    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(0, 4))
 
 
 if __name__ == '__main__':
-    _lambda_c = 640  # nm
-    _n_1 = 1.46
-    _n_2 = 2.09
-    _depth_1 = quarter_phase_depth(_lambda_c, _n_1)
-    _depth_2 = quarter_phase_depth(_lambda_c, _n_2)
-    _matrix_1 = planar_transfer_matrix(_depth_1, _n_1)
-    _matrix_2 = planar_transfer_matrix(_depth_2, _n_2)
-    _layers = 2
+    import matplotlib.pyplot as plt
 
-    print(_depth_1)
-    print(_depth_2)
-    print(_matrix_1(_lambda_c))
-    print(_matrix_2(_lambda_c))
+    # Data file reference (Import data)
+    file_path = 'data/Trans/20210104'  # Directory path from project root (Optional)
+    file_meas = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0'
+    file_samp = 'samples_1s_10V_rate1300000.0'
 
-    _multi_matrix = layered_matrix(_matrix_1, _matrix_2, _layers)
-    print(_multi_matrix(_lambda_c))
+    # Single measurement analysis tools
+    single_source_analysis(meas_file=file_meas, samp_file=file_samp, filepath=file_path)
 
-    print(dielectric_layered_matrix(_layers, _n_1, _n_2, _lambda_c)(_lambda_c))
+    # Data file reference (Import data)
+    file_meas_base = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration{}'
 
-    plot_wavelength_vs_reflection()
+    # Multi measurement analysis tools
+    multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(5), samp_file=file_samp, filepath=file_path)
+
+    plt.show()
