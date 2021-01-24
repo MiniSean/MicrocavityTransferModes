@@ -4,7 +4,6 @@ from matplotlib import colors
 from tqdm import tqdm  # For displaying for-loop process to console
 from typing import Iterable, List, Tuple, Dict
 from src.import_data import SyncMeasData
-from src.allan_variance_analysis import file_fetch_function
 from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, find_nearest_index, LabeledPeakCluster, SAMPLE_WAVELENGTH
 
 
@@ -24,8 +23,6 @@ def pad_to_pinned(nested_array: List[np.ndarray], dictionary: Dict[Tuple[int, in
     data_array = np.asarray(dictionary[key][1])  # List[int]
     min_data_offset = np.min(data_array)
     pre_skip = min_data_offset - data_array
-    # Align front of arrays
-    # nested_array = [_array[pre_skip[i]:] for i, _array in enumerate(nested_array)]
 
     return pad_to_dense(nested_array=nested_array)
 
@@ -89,9 +86,7 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
     pre_skip = total_pin_peak_index - np.min(total_pin_peak_index)
     # Align front of arrays
     trans_array = [_array[pre_skip[i]:] for i, _array in enumerate(trans_array)]
-    min_index = trans_array.index(min(trans_array, key=len))
     lead_index = trans_array.index(max(trans_array, key=len))
-    mid_len_diff = int((len(trans_array[lead_index]) - len(trans_array[min_index])) / 2)
     index_offset = total_data_slice_array[lead_index][0]  # + pre_skip[lead_index]
 
     # Format data
@@ -113,10 +108,7 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
             std_pos_value = np.std(peak_dict[key][0])
             mean = round((avg_pos_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
             std = round((std_pos_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
-
             avg_pos_data = np.mean([peak_index - pre_skip[i] - total_data_slice_array[i][0] for i, peak_index in enumerate(peak_dict[key][1])])
-            print(key, avg_pos_value)
-
             ax.axvline(x=avg_pos_data, color='r', ls='--', label=r'$\mu=$' + f' {mean}' + r', $\sigma=$ ' + f'{std} [nm]')
         else:
             break  # No higher index peaks available
@@ -128,7 +120,6 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
     font_size = 22
     plt.title(f'Focus mode (q={pin[0]}, m+n={pin[1]}, {iter_count} iterations)')
     plt.ylabel(f'Transmission [a.u.]', fontsize=font_size)
-    #  with {round(std_value_slice[0], 2)}, {round(std_value_slice[1], 2)} ' + r'$\sigma$' + '
     plt.xlabel(f'Cavity length (based on average) [nm]', fontsize=font_size)
     plt.yscale('log')
     plt.grid(True)
@@ -140,8 +131,6 @@ def plot_pinned_focus_top(collection_iterator: Iterable[LabeledPeakCollection], 
 
     # Prepare parameters
     iter_count = 0
-    largest_array_len = 0
-    lead_data_class = None
     peak_dict = {}  # Dict[Tuple(long, trans, index), Tuple[List[pos_value], List[pos_index]]
     total_value_slice_array = []
     total_data_slice_array = []
@@ -188,7 +177,6 @@ def plot_pinned_focus_top(collection_iterator: Iterable[LabeledPeakCollection], 
 
         total_value_slice_array.append(total_value_slice)  # Store value slice
         total_data_slice_array.append(total_data_slice)  # Store data slice
-        # data_pin_array.append(data_pin)  # Store data pin
         trans_array.append(np.asarray(collection.get_measurement_data_slice(union_slice=total_data_slice)[1]))  # Store y-data
         # Store data class of largest array len
         data_class_array.append(data_class)
@@ -207,9 +195,7 @@ def plot_pinned_focus_top(collection_iterator: Iterable[LabeledPeakCollection], 
     trans_array = [_array[pre_skip[i]:] for i, _array in enumerate(trans_array)]
 
     # Format data
-    min_index = trans_array.index(min(trans_array, key=len))
     lead_index = trans_array.index(max(trans_array, key=len))
-    mid_len_diff = int((len(trans_array[lead_index]) - len(trans_array[min_index]))/2)
     index_offset = total_data_slice_array[lead_index][0]  # + pre_skip[lead_index]
     trans_array, array_shape = pad_to_dense(nested_array=trans_array)  # , dictionary=peak_dict, key=(pin[0], pin[1], 0))
     trans_array = np.transpose(trans_array)  # Transpose
@@ -227,7 +213,6 @@ def plot_pinned_focus_top(collection_iterator: Iterable[LabeledPeakCollection], 
     plt.xticks(locs[0:-1], xticks)
     plt.title(f'Pinned plot over {iter_count} sample iterations (Second FSR)')
     plt.ylabel(f'Different Iterations [a.u.]', fontsize=font_size)
-    #  with {round(std_value_slice[0], 2)}, {round(std_value_slice[1], 2)} ' + r'$\sigma$' + '
     plt.xlabel(f'Cavity length (based on average) [nm]', fontsize=font_size)
     plt.grid(True)
 
@@ -256,14 +241,7 @@ def plot_pinned_focus_top(collection_iterator: Iterable[LabeledPeakCollection], 
                 std_pos_value = np.std(peak_dict[key][0])
                 mean = round((avg_pos_value - rev_pos_value)/(SAMPLE_WAVELENGTH/2), 3)
                 std = round((std_pos_value)/(SAMPLE_WAVELENGTH/2), 3)
-
-                # avg_pos_data = int(np.mean([find_nearest_index(array=data_class.x_boundless_data, value=peak_dict[key][0][i]) for i, data_class in enumerate(data_class_array)])) - data_bound[0]
-                # avg_pos_data = int(np.mean([find_nearest_index(array=lead_data_class.x_boundless_data, value=peak) for peak in peak_dict[key][0]])) - data_bound[0]
-                # avg_pos_data = find_nearest_index(array=lead_data_class.x_boundless_data, value=avg_pos_value) - data_bound[0]
-                # avg_pos_data = int(np.mean(peak_dict[key][1])) - data_bound[0]
                 avg_pos_data = np.mean([peak_index - pre_skip[k] - data_bound[0] for k, peak_index in enumerate(peak_dict[key][1])])
-                print(key, avg_pos_value)
-
                 ax.axvline(x=avg_pos_data, color='r', ls='--', label=f'{mean}' + r' $\pm$ ' + f'{std}' + r' [$\lambda / 2$]')
             else:
                 break  # No higher index peaks available
@@ -271,43 +249,8 @@ def plot_pinned_focus_top(collection_iterator: Iterable[LabeledPeakCollection], 
         locs, labels = plt.xticks()
         xticks = [int(lead_data_class.x_boundless_data[int(index_offset + index)]) for index in locs[0:-1]]
         plt.xticks(locs[0:-1], xticks)
-        # plt.xticks(locs[0:-1], np.linspace(start=value_bound[0], stop=value_bound[1], num=len(locs), dtype=int))
         plt.title(f'Focus mode (q={focus[i][0]}, m+n={focus[i][1]}). Transmission relative to fundamental mode')
         plt.ylabel(f'Different Iterations [a.u.]', fontsize=font_size)
         plt.xlabel(f'Cavity length [nm]', fontsize=font_size)
         plt.grid(True)
         plt.legend()
-
-
-if __name__ == '__main__':
-    from src.import_data import FileToMeasData
-    from src.peak_identifier import identify_peaks
-    from src.peak_relation import get_converted_measurement_data, get_piezo_response
-    # Reference files
-    file_samp = 'samples_1s_10V_rate1300000.0'
-
-    def get_collections(iter_count: int) -> Iterable[LabeledPeakCollection]:
-        response_func = None
-        for i in range(iter_count):
-            try:
-                filename = file_fetch_function(iteration=i)
-                measurement_class = FileToMeasData(meas_file=filename, samp_file=file_samp)
-                # # Get response function
-                # if response_func is None:
-                #     response_func = get_piezo_response(meas_class=measurement_class)
-                # # Set all subsequent response functions
-                # measurement_class.set_voltage_conversion(conversion_function=response_func)
-
-                measurement_class = get_converted_measurement_data(meas_class=measurement_class)
-                labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
-                yield labeled_collection
-            except FileNotFoundError:
-                break
-
-    iter_count = 30
-    plot_pinned_focus_top(collection_iterator=get_collections(iter_count=iter_count), pin=(1, 0), focus=[(1, 2)])
-    # plot_pinned_focus_top(collection_iterator=get_collections(iter_count=iter_count), pin=(0, 0), focus=[(1, 2)])
-
-    # plot_pinned_focus_side(collection_iterator=get_collections(iter_count=iter_count), pin=(0, 3))
-
-    plt.show()
