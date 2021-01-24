@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from typing import Tuple, Union, List
@@ -5,6 +6,7 @@ from src.import_data import import_npy, slice_array, SyncMeasData, FileToMeasDat
 from src.peak_identifier import PeakCollection, PeakData
 from src.peak_relation import LabeledPeakCollection, LabeledPeakCluster, flatten_clusters
 from src.peak_normalization import NormalizedPeakCollection, NormalizedPeak
+from src.cavity_radius_analysis import get_gouy_func
 # Allows to surpass the hardcoded limit in the number of points in the backend Agg
 rcParams['agg.path.chunksize'] = 1000
 
@@ -143,6 +145,39 @@ def plot_peak_normalization_overlap(collection: NormalizedPeakCollection) -> plt
         except AttributeError:
             break
     _ax.set_xlabel('Normalized distance ' + r'$[\lambda / 2]$')
+    return _ax
+
+
+def plot_radius_estimate(collection: LabeledPeakCollection, radius_mean: float, offset: float, radius_std: float) -> plt.axes:
+    _, _ax = plt.subplots()
+    cluster_array = collection.get_clusters
+    cluster_array.extend([cluster for cluster in collection.get_q_clusters])
+    for i in range(-1, 6):
+        sub_cluster_array = [cluster for cluster in cluster_array if cluster.get_transverse_mode_id == i]
+        if len(sub_cluster_array) == 0:
+            continue
+
+        d = np.asarray([cluster.get_avg_x for cluster in sub_cluster_array])
+        # Plot Gouy prediction
+        y_array = get_gouy_func(length_input=d, length_offset=offset, radius_mean=radius_mean, trans_mode=i)
+        _ax.plot(d, y_array, 'o', label=f'm+n={i}')
+        # Plot fit lines
+        x_space = np.linspace(-offset, d[-1], 100)
+        y_space = get_gouy_func(length_input=x_space, length_offset=offset, radius_mean=radius_mean, trans_mode=i)
+        _ax.plot(x_space, y_space, ('k:' if i == -1 else 'k-'))
+
+    # Vertical indicator lines
+    _ax.axvline(x=-offset, ls='--', color='darkorange')
+    _ax.axvline(x=0, ls='--', color='darkorange')
+
+    # Produce fit results
+    print(f'Cavity radius: R = {round(radius_mean, 1)} ' + r'+/-' + f' {round(radius_std, 1)} [nm]')
+    print(f'Cavity offset length: {offset} [nm]')
+    _ax.set_title(f'Fitted cavity radius: R={round(radius_mean, 1)} ' + r'$\pm$' + f' {round(radius_std, 1)} [nm]')
+    _ax.set_ylabel(f'Transverse mode splitting' + r' [$\Delta L / (\lambda / 2)$]')
+    _ax.set_xlabel(f'Mirror position - {round(offset, 1)} (Offset)' + r' [nm]')
+    _ax.grid(True)
+    _ax.legend()
     return _ax
 
 
