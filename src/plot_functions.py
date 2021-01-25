@@ -20,8 +20,12 @@ def plot_class(axis: plt.axes, measurement_class: SyncMeasData, **kwargs):
 def get_standard_axis(axis: plt.axes) -> plt.axes:
     # Set axis
     axis.set_xlabel('Sampling Cavity Length [nm]')  # Voltage [V]
-    axis.set_ylabel('Transmission [a.u.]')
+    axis.set_ylabel('Transmission (log10(V))')
     axis.set_yscale('log')
+    locs, labels = plt.yticks()
+    yticks = [np.log10(value) for value in locs[0:-1]]
+    plt.yticks(locs[0:-1], yticks)
+    axis.set_ylim([10**(-4), 10**(max(yticks))])  # Custom y-lim
     axis.grid(True)
     return axis
 

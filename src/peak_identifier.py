@@ -3,7 +3,7 @@ from typing import List, Tuple
 from scipy.signal import find_peaks, peak_prominences
 from src.import_data import SyncMeasData
 # cutoff = mean + c * std
-PEAK_PROMINENCE = 0.3  # [0, 2]: Minimum peak-prominence value required to be detected
+PEAK_PROMINENCE = 1.2  # [0, 2]: Minimum peak-prominence value required to be detected
 
 
 class PeakData(float):

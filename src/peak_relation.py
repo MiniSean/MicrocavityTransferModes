@@ -5,7 +5,7 @@ from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 SAMPLE_WAVELENGTH = 633
 # cutoff = mean + c * std
 HEIGHT_SEPARATION = 0.65  # [0, 2]: Minimum height value between clusters-max to specify as new fundamental mode
-CLUSTER_SEPARATION = 0.1  # [0, 2]: Minimum distance value between peaks within a single cluster
+CLUSTER_SEPARATION = 0.2  # [0, 2]: Minimum distance value between peaks within a single cluster
 
 
 class LabeledPeak(PeakData):

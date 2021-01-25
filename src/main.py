@@ -33,24 +33,24 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
 
     # Peak Identification
     peak_collection = identify_peaks(meas_data=measurement_container)
-    plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
+    # plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
 
     # Peak clustering and mode labeling
     labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection, q_offset=Q_OFFSET)
     plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
-
-    # Normalized based on free-spectral-ranges (FSR)
-    normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
-    plot_peak_normalization_spectrum(collection=normalized_collection)  # Plot
-    plot_peak_normalization_overlap(collection=normalized_collection)  # Plot
-
-    # Estimate radius
-    [radius_mean, offset], [radius_std, offset_std] = get_radius_estimate(cluster_array=labeled_collection.get_clusters, wavelength=633)
-    plot_radius_estimate(collection=labeled_collection, radius_mean=radius_mean, offset=offset, radius_std=radius_std)  # Plot
-
-    # Analysis object
-    analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, collection=normalized_collection)
-    print(analysis_obj)
+    #
+    # # Normalized based on free-spectral-ranges (FSR)
+    # normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
+    # plot_peak_normalization_spectrum(collection=normalized_collection)  # Plot
+    # plot_peak_normalization_overlap(collection=normalized_collection)  # Plot
+    #
+    # # Estimate radius
+    # [radius_mean, offset], [radius_std, offset_std] = get_radius_estimate(cluster_array=labeled_collection.get_clusters, wavelength=633)
+    # plot_radius_estimate(collection=labeled_collection, radius_mean=radius_mean, offset=offset, radius_std=radius_std)  # Plot
+    #
+    # # Analysis object
+    # analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, collection=normalized_collection)
+    # print(analysis_obj)
 
 
 def get_file_fetch_func(file_base_name: str, filepath: Union[str, None] = DATA_DIR):
@@ -90,27 +90,27 @@ def multi_source_analysis(meas_file_base: str, iter_count: Iterable[int], samp_f
     # plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(5, 0), focus=[(5, 2)])  # Plot
     #
     # # Side-view measurement transmission focus
-    # plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(5, 1))
+    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(8, 8))
 
-    # Allan variance
-    scan_speed = 3500
-    _x, allan_variance_y = get_allan_variance(collection_iterator=iterable_collections, scan_velocity=scan_speed)
-    plot_allan_variance(xs=_x, ys=allan_variance_y)  # Plot
+    # # Allan variance
+    # scan_speed = 3500
+    # _x, allan_variance_y = get_allan_variance(collection_iterator=iterable_collections, scan_velocity=scan_speed)
+    # plot_allan_variance(xs=_x, ys=allan_variance_y)  # Plot
 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     # Data file reference (Import data)
-    file_path = 'data/Trans/20210104'  # Directory path from project root (Optional)
-    file_meas = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration0'
+    file_path = 'data/Trans/20210120'  # Directory path from project root (Optional)
+    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0'
     file_samp = 'samples_1s_10V_rate1300000.0'
 
     # Single measurement analysis tools
-    single_source_analysis(meas_file=file_meas, samp_file=file_samp, filepath=file_path)
+    # single_source_analysis(meas_file=file_meas, samp_file=file_samp, filepath=file_path)
 
     # Data file reference (Import data)
-    file_meas_base = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration{}'
+    file_meas_base = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'
 
     # Multi measurement analysis tools
     multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(5), samp_file=file_samp, filepath=file_path)

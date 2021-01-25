@@ -4,6 +4,8 @@ from matplotlib import colors
 from tqdm import tqdm  # For displaying for-loop process to console
 from typing import Iterable, List, Tuple, Dict
 from src.import_data import SyncMeasData
+from src.plot_functions import get_standard_axis
+from src.plot_iteration_mode import most_frequent
 from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, find_nearest_index, LabeledPeakCluster, SAMPLE_WAVELENGTH
 
 
@@ -98,20 +100,41 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
         if i == len(trans_array) - 1:
             color = 'darkorange'
         ax.plot(meas_array, color=color)
+    # Filter dict entries
+    most_freq_nr = most_frequent([len(value[0]) for value in peak_dict.values()])
+    peak_dict = {k: v for k, v in peak_dict.items() if len(v[0]) == most_freq_nr}
     # Plot mean and std peak locations
     for i in range(10):
         key = (pin[0], pin[1], i)
         if key in peak_dict:
-            if len(peak_dict[key][0]) < 0.8 * iter_count:
+            pos_array = peak_dict[key][0]
+            # if len(pos_array) != most_freq_nr:
+            #     continue
+            if len(pos_array) < 0.8 * iter_count:
                 continue
-            avg_pos_value = np.mean(peak_dict[key][0])  # Sum / Count [nm]
-            std_pos_value = np.std(peak_dict[key][0])
+            avg_pos_value = np.mean(pos_array)  # Sum / Count [nm]
+            std_pos_value = np.std(pos_array)
             mean = round((avg_pos_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
             std = round((std_pos_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
             avg_pos_data = np.mean([peak_index - pre_skip[i] - total_data_slice_array[i][0] for i, peak_index in enumerate(peak_dict[key][1])])
             ax.axvline(x=avg_pos_data, color='r', ls='--', label=r'$\mu=$' + f' {mean}' + r', $\sigma=$ ' + f'{std} [nm]')
         else:
             break  # No higher index peaks available
+    # Plot peak distances
+    for i in range(10):
+        key_first = (pin[0], pin[1], i)
+        key_second = (pin[0], pin[1], i+1)
+        if key_second in peak_dict and key_first in peak_dict:
+            pos_array_first = peak_dict[key_first][0]
+            pos_array_second = peak_dict[key_second][0]
+            # if len(pos_array_first) != most_freq_nr or len(pos_array_second) != most_freq_nr:
+            #     continue
+            distances = np.asarray(pos_array_second) - np.asarray(pos_array_first)
+            avg_dist_value = np.mean(distances)
+            std_dist_value = np.std(distances)
+            mean = round((avg_dist_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
+            std = round((std_dist_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
+            ax.plot(np.NaN, np.NaN, '-', color='none', label=f'({i}->{i+1}) : ' + r'$\mu=$' + f' {mean}' + r', $\sigma=$ ' + f'{std} [nm]')
 
     # Set plot layout
     locs, labels = plt.xticks()
@@ -119,9 +142,10 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
     plt.xticks(locs[0:-1], xticks)
     font_size = 22
     plt.title(f'Focus mode (q={pin[0]}, m+n={pin[1]}, {iter_count} iterations)')
-    plt.ylabel(f'Transmission [a.u.]', fontsize=font_size)
-    plt.xlabel(f'Cavity length (based on average) [nm]', fontsize=font_size)
-    plt.yscale('log')
+    ax = get_standard_axis(axis=ax)
+    # plt.ylabel(f'Transmission [a.u.]', fontsize=font_size)
+    # plt.xlabel(f'Cavity length (based on average) [nm]', fontsize=font_size)
+    # plt.yscale('log')
     plt.grid(True)
     plt.legend()
 
@@ -250,7 +274,8 @@ def plot_pinned_focus_top(collection_iterator: Iterable[LabeledPeakCollection], 
         xticks = [int(lead_data_class.x_boundless_data[int(index_offset + index)]) for index in locs[0:-1]]
         plt.xticks(locs[0:-1], xticks)
         plt.title(f'Focus mode (q={focus[i][0]}, m+n={focus[i][1]}). Transmission relative to fundamental mode')
-        plt.ylabel(f'Different Iterations [a.u.]', fontsize=font_size)
-        plt.xlabel(f'Cavity length [nm]', fontsize=font_size)
+        get_standard_axis(axis=plt)
+        # plt.ylabel(f'Different Iterations [a.u.]', fontsize=font_size)
+        # plt.xlabel(f'Cavity length [nm]', fontsize=font_size)
         plt.grid(True)
         plt.legend()

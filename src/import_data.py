@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 # import logging
 from typing import Tuple, Optional, List, Callable
-DATA_DIR = 'data/Trans/20210104'
+DATA_DIR = 'data/Trans/20210120'
 ICAP_DIR = 'data/ICCaptures'
 
 
