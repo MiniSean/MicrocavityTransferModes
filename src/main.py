@@ -12,7 +12,7 @@
 #
 from src.import_data import FileToMeasData, DATA_DIR, import_npy
 from typing import Union, Iterable
-from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate
+from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate, plot_allan_variance
 from src.plot_iteration_mode_color import plot_pinned_focus_top, plot_pinned_focus_side
 from src.cavity_radius_analysis import get_radius_estimate
 from src.peak_relation import get_converted_measurement_data
@@ -20,6 +20,7 @@ from src.peak_identifier import identify_peaks
 from src.peak_relation import LabeledPeakCollection
 from src.peak_normalization import NormalizedPeakCollection
 from src.structural_analysis import MeasurementAnalysis
+from src.allan_variance_analysis import get_allan_variance
 
 
 def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, None] = DATA_DIR):
@@ -83,12 +84,17 @@ def multi_source_analysis(meas_file_base: str, iter_count: Iterable[int], samp_f
     # Peak clustering and mode labeling
     iterable_collections = list(get_labeled_collection(meas_file_base=meas_file_base, iter_count=iter_count, samp_file=samp_file, filepath=filepath))
 
-    # Top-view measurement transmission comparison (with pin and focus selection)
-    # pin/focus = ( longitudinal mode ID, transverse mode ID )
-    plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(5, 0), focus=[(5, 2)])  # Plot
+    # # Top-view measurement transmission comparison (with pin and focus selection)
+    # # pin/focus = ( longitudinal mode ID, transverse mode ID )
+    # plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(5, 0), focus=[(5, 2)])  # Plot
+    #
+    # # Side-view measurement transmission focus
+    # plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(5, 1))
 
-    # Side-view measurement transmission focus
-    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(5, 1))
+    # Allan variance
+    scan_speed = 3500
+    _x, allan_variance_y = get_allan_variance(collection_iterator=iterable_collections, scan_velocity=scan_speed)
+    plot_allan_variance(xs=_x, ys=allan_variance_y)  # Plot
 
 
 if __name__ == '__main__':

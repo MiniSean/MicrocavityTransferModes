@@ -181,6 +181,23 @@ def plot_radius_estimate(collection: LabeledPeakCollection, radius_mean: float, 
     return _ax
 
 
+# Define font
+font_size = 22
+plt.rcParams.update({'font.size': font_size})
+
+
+def plot_allan_variance(xs: np.ndarray, ys: np.ndarray) -> plt.axes:
+    _, _ax = plt.subplots()
+    _ax.plot(xs, ys, '.')
+    _ax.set_ylabel(f'Variance' + r' $\langle [x(t + \delta t) - x(t)]^2 \rangle$ $[nm^2]$', fontsize=font_size)
+    # _ax.set_ylabel(f'Distance' + r' $abs(x(t + \delta t) - x(t))$ $[nm]$', fontsize=font_size)
+    _ax.set_xlabel(f'Time step' + r' $\delta t[s]$', fontsize=font_size)
+    _ax.set_yscale('log')
+    # _ax.set_xscale('log')
+    _ax.grid(True)
+    return _ax
+
+
 if __name__ == '__main__':
     # Define file name to retrieve from predefined data path
     file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0'
