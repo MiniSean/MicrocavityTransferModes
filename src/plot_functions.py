@@ -93,9 +93,12 @@ def plot_peak_relation(collection: LabeledPeakCollection, meas_class: SyncMeasDa
     _ax = plot_class(axis=_ax, measurement_class=meas_class)
 
     # Determine mode sequence corresponding to first FSR
-    cluster_array, value_slice = collection.get_mode_sequence(long_mode=0)
-    _ax.axvline(x=value_slice[0], color='r', alpha=1)
-    _ax.axvline(x=value_slice[1], color='g', alpha=1)
+    try:
+        cluster_array, value_slice = collection.get_mode_sequence(long_mode=collection.get_min_q_id)
+        _ax.axvline(x=value_slice[0], color='r', alpha=1)
+        _ax.axvline(x=value_slice[1], color='g', alpha=1)
+    except ValueError:
+        pass
     _ax = plot_cluster_collection(axis=_ax, data=collection)
     return _ax
 

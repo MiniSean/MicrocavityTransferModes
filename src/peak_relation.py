@@ -113,7 +113,8 @@ class LabeledPeakCollection(PeakCollection):
     Contains dictionary with estimated (m + n = -1) or (planar) mode.
     """
 
-    def __init__(self, transmission_peak_collection: PeakCollection):
+    def __init__(self, transmission_peak_collection: PeakCollection, q_offset: int = 0):
+        self._q_offset = q_offset
         self._mode_clusters = self._set_labeled_clusters(transmission_peak_collection)  # Pre sample conversion
         super().__init__(flatten_clusters(data=self._mode_clusters))
         self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
@@ -170,7 +171,7 @@ class LabeledPeakCollection(PeakCollection):
         result = []
         for long_mode_id, cluster_array in enumerate(ordered_clusters):
             for trans_mode_id, cluster in enumerate(cluster_array):
-                result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id, trans_mode=trans_mode_id))
+                result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id + self._q_offset, trans_mode=trans_mode_id))
         return result  # [peak_data for peak_data in optical_mode_collection]
 
     def _set_q_dict(self, cluster_array: List[LabeledPeakCluster]) -> Dict[int, Union[LabeledPeakCluster, None]]:
@@ -185,9 +186,10 @@ class LabeledPeakCollection(PeakCollection):
         for i in range(cluster_array[-1].get_longitudinal_mode_id):
             try:  # find q mode estimate until not enough data points are available
                 pos_array = self.get_q_estimate(long_mode=i)
-            except ValueError:  # Add None identifier for last q mode
-                result[i] = None
-                return result
+            except ValueError:  # Not enough data points to determine q mode (Add None identifier for last q mode)
+                continue
+                # result[i] = None
+                # return result
             # Construct labeled peak cluster
             peak_array = []
             for j, pos_value in enumerate(pos_array):
@@ -308,8 +310,18 @@ class LabeledPeakCollection(PeakCollection):
         """Returns a list of q (m + n = -1) clusters."""
         result = []
         for q_long_id, q_cluster in self.q_dict.items():
+            if q_cluster is None:
+                raise ValueError(f'(m + n = -1) mode not identified. None found.')
             result.append(q_cluster)
         return result
+
+    @property
+    def get_min_q_id(self) -> int:
+        return min(self.q_dict.keys())
+
+    @property
+    def get_max_q_id(self) -> int:
+        return max(self.q_dict.keys())
 
     @property
     def get_clusters_avg_x(self) -> List[float]:
@@ -322,18 +334,26 @@ class LabeledPeakCollection(PeakCollection):
         return [peak_cluster.get_avg_y for peak_cluster in self.get_clusters]
 
 
-def get_piezo_response(meas_class: SyncMeasData) -> Callable[[np.ndarray], np.ndarray]:
-    """Returns the fitted piezo-voltage to cavity-length response."""
+def get_piezo_response(meas_class: SyncMeasData, **kwargs) -> Callable[[np.ndarray], np.ndarray]:
+    """
+    Returns the fitted piezo-voltage to cavity-length response.
+    **kwargs:
+        - q_offset: (LabeledPeakCollection) determinse the starting fundamental mode
+    """
     from src.sample_conversion import fit_piezo_response
-    initial_labeling = LabeledPeakCollection(identify_peaks(meas_class))
+    initial_labeling = LabeledPeakCollection(identify_peaks(meas_class), **kwargs)
     # Set voltage conversion function
     return fit_piezo_response(cluster_collection=initial_labeling.get_q_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
 
 
-def get_converted_measurement_data(meas_class: SyncMeasData) -> SyncMeasData:
-    """Returns updated meas_class with converted sample (x-axis) data."""
+def get_converted_measurement_data(meas_class: SyncMeasData, **kwargs) -> SyncMeasData:
+    """
+    Returns updated meas_class with converted sample (x-axis) data.
+    **kwargs:
+        - q_offset: (get_piezo_response) determinse the starting fundamental mode
+    """
     # Set voltage conversion function
-    response_func = get_piezo_response(meas_class=meas_class)
+    response_func = get_piezo_response(meas_class=meas_class, **kwargs)
     meas_class.set_voltage_conversion(conversion_function=response_func)
     return meas_class
 

@@ -21,6 +21,7 @@ from src.peak_relation import LabeledPeakCollection
 from src.peak_normalization import NormalizedPeakCollection
 from src.structural_analysis import MeasurementAnalysis
 from src.allan_variance_analysis import get_allan_variance
+Q_OFFSET = 7
 
 
 def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, None] = DATA_DIR):
@@ -28,14 +29,14 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
     measurement_container = FileToMeasData(meas_file=meas_file, samp_file=samp_file, filepath=filepath)
 
     # Apply voltage to length conversion
-    measurement_container = get_converted_measurement_data(meas_class=measurement_container)
+    measurement_container = get_converted_measurement_data(meas_class=measurement_container, q_offset=Q_OFFSET)
 
     # Peak Identification
     peak_collection = identify_peaks(meas_data=measurement_container)
     plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
 
     # Peak clustering and mode labeling
-    labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection)
+    labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection, q_offset=Q_OFFSET)
     plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
 
     # Normalized based on free-spectral-ranges (FSR)
@@ -73,8 +74,8 @@ def get_labeled_collection(meas_file_base: str, iter_count: Iterable[int], samp_
         try:
             meas_file = fetch_func(iteration=i)
             measurement_container = FileToMeasData(meas_file=meas_file, samp_file=samp_file, filepath=filepath)
-            measurement_container = get_converted_measurement_data(meas_class=measurement_container)
-            yield LabeledPeakCollection(transmission_peak_collection=identify_peaks(meas_data=measurement_container))
+            measurement_container = get_converted_measurement_data(meas_class=measurement_container, q_offset=Q_OFFSET)
+            yield LabeledPeakCollection(transmission_peak_collection=identify_peaks(meas_data=measurement_container), q_offset=Q_OFFSET)
         except FileNotFoundError:
             continue
 

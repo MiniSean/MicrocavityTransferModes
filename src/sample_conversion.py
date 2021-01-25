@@ -103,7 +103,7 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     p0 = [a, b, c, L0]
 
     # Mode samples
-    q_offset = 3
+    q_offset = 0
     x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
     q = np.asarray([mode.get_longitudinal_mode_id + q_offset for mode in cluster_collection])
     # m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
