@@ -20,6 +20,7 @@ from src.peak_identifier import identify_peaks
 from src.peak_relation import LabeledPeakCollection
 from src.peak_normalization import NormalizedPeakCollection
 from src.structural_analysis import MeasurementAnalysis
+from src.plot_mode_splitting import plot_mode_splitting, SplittingFocus, ModeID
 from src.allan_variance_analysis import get_allan_variance
 Q_OFFSET = 7
 
@@ -86,11 +87,14 @@ def multi_source_analysis(meas_file_base: str, iter_count: Iterable[int], samp_f
     iterable_collections = list(get_labeled_collection(meas_file_base=meas_file_base, iter_count=iter_count, samp_file=samp_file, filepath=filepath))
 
     # # Top-view measurement transmission comparison (with pin and focus selection)
-    # # pin/focus = ( longitudinal mode ID, transverse mode ID )
-    # plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(5, 0), focus=[(5, 2)])  # Plot
+    # pin/focus = ( longitudinal mode ID, transverse mode ID )
+    # plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(9, 0), focus=[(8, 8)])  # Plot
     #
     # # Side-view measurement transmission focus
-    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(8, 8))
+    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(10, 8))
+
+    # Mode splitting
+    plot_mode_splitting(collection_iterator=iterable_collections, focus=global_focus)  # Plot
 
     # # Allan variance
     # scan_speed = 3500
@@ -113,6 +117,7 @@ if __name__ == '__main__':
     file_meas_base = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'
 
     # Multi measurement analysis tools
-    multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(5), samp_file=file_samp, filepath=file_path)
+    global_focus = SplittingFocus(data=[(ModeID(9, 0), ModeID(8, 8, 0)), (ModeID(10, 0), ModeID(9, 8, 0)), (ModeID(11, 0), ModeID(10, 8, 0))])
+    multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(8), samp_file=file_samp, filepath=file_path)
 
     plt.show()

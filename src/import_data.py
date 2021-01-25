@@ -16,8 +16,8 @@ class SyncMeasData:
      -background high wavelength laser scan (outside cavity stopband) to accurately determine cavity length)
     """
     def __init__(self, data_array: np.ndarray, samp_array: np.ndarray):
-        self.data_array = data_array  # Contains both transmitted as reflected data
-        self.samp_array = samp_array
+        self.data_array = data_array[100000:]  # Contains both transmitted as reflected data
+        self.samp_array = samp_array[100000:]  # TODO: Temporary hard cut
         # Sample conversion dependent data
         self._transmitted_data = self.data_array
         self._sample_data = self.samp_array
