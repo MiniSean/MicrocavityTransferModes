@@ -25,7 +25,7 @@ def get_standard_axis(axis: plt.axes) -> plt.axes:
     locs, labels = plt.yticks()
     yticks = [np.log10(value) for value in locs[0:-1]]
     plt.yticks(locs[0:-1], yticks)
-    axis.set_ylim([10**(-4), 10**(max(yticks))])  # Custom y-lim
+    axis.set_ylim([10**(-4), 10**(1)])  # Custom y-lim
     axis.grid(True)
     return axis
 
@@ -203,6 +203,76 @@ def plot_allan_variance(xs: np.ndarray, ys: np.ndarray) -> plt.axes:
     # _ax.set_xscale('log')
     _ax.grid(True)
     return _ax
+
+
+def plot_mode_classification(meas_data: SyncMeasData) -> plt.axes:
+    """Plots report paper figure for entire classification process"""
+    from src.peak_identifier import identify_peaks
+    from src.peak_relation import LabeledPeakCollection, get_converted_measurement_data
+    from src.main import Q_OFFSET
+    _fig, ((_ax00, _ax01), (_ax10, _ax11)) = plt.subplots(2, 2, sharey='all')
+    colors = plt.cm.jet(np.linspace(0, 1, 10))
+
+    # Plot raw data
+    _ax00.text(1.05, 1., '(a)', horizontalalignment='center', verticalalignment='top', transform=_ax00.transAxes)
+    _ax00 = plot_class(axis=_ax00, measurement_class=meas_data)
+    _ax00.set_xlabel('Voltage [V]')
+
+    # Plot peak locations
+    _ax01.text(1.05, 1., '(b)', horizontalalignment='center', verticalalignment='top', transform=_ax01.transAxes)
+    peak_collection = identify_peaks(meas_data=meas_data)
+    _ax01 = plot_class(axis=_ax01, measurement_class=meas_data, alpha=0.2)
+    for i, peak_data in enumerate(peak_collection):
+        if peak_data.relevant:
+            _ax01.plot(peak_data.get_x, peak_data.get_y, 'x', color='r', alpha=1)
+    _ax01.set_xlabel('Voltage [V]')
+
+    # Plot q mode separation and mode ordering
+    _ax10.text(1.05, 1., '(c)', horizontalalignment='center', verticalalignment='top', transform=_ax10.transAxes)
+    labeled_collection = LabeledPeakCollection(peak_collection)
+    _ax10 = get_standard_axis(axis=_ax10)
+    min_q = min(labeled_collection.q_dict.keys())
+    mode_sequence_range = range(min_q, max(labeled_collection.q_dict.keys())+2)
+    for i in mode_sequence_range:
+        try:
+            cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=i)
+            # Get normalized measurement
+            x_sample, y_measure = labeled_collection.get_measurement_data_slice(union_slice=value_slice)
+            _ax10.plot(x_sample, y_measure, alpha=1, color=colors[cluster_array[0].get_longitudinal_mode_id - min_q])
+        except AttributeError:
+            break
+    for i, peak_data in enumerate(labeled_collection):
+        if peak_data.relevant:
+            _ax10.plot(peak_data.get_x, peak_data.get_y, 'x', color=colors[peak_data.get_transverse_mode_id - min_q], alpha=1)
+    _ax10.set_xlabel('Voltage [V]')
+
+    # Plot finalized labeled peaks
+    _ax11.text(1.05, 1., '(d)', horizontalalignment='center', verticalalignment='top', transform=_ax11.transAxes)
+    meas_data = get_converted_measurement_data(meas_class=meas_data, q_offset=Q_OFFSET, verbose=False)
+    labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=meas_data), q_offset=Q_OFFSET)
+    # _ax11 = plot_class(axis=_ax11, measurement_class=meas_data, alpha=0.2)
+    # _ax11 = plot_cluster_collection(axis=_ax11, data=labeled_collection)
+    min_q = min(labeled_collection.q_dict.keys())
+    mode_sequence_range = range(min_q, max(labeled_collection.q_dict.keys())+2)
+    for i in mode_sequence_range:
+        try:
+            cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=i)
+            # Get normalized measurement
+            x_sample, y_measure = labeled_collection.get_measurement_data_slice(union_slice=value_slice)
+            _ax11.plot(x_sample, y_measure, alpha=.2, color=colors[cluster_array[0].get_longitudinal_mode_id - min_q])
+        except AttributeError:
+            print(i, f'break out of mode sequence')
+            break
+
+    for cluster in labeled_collection.get_clusters:
+        if cluster.get_transverse_mode_id == 0:
+            plt.gca().set_prop_cycle(None)
+        for peak_data in cluster:
+            if peak_data.relevant:
+                _ax11.plot(peak_data.get_x, peak_data.get_y, 'x', color=colors[peak_data.get_transverse_mode_id - min_q], alpha=1)
+        _ax11.text(x=cluster.get_avg_x, y=cluster.get_max_y, s=f'({cluster.get_longitudinal_mode_id}, {cluster.get_transverse_mode_id})', fontsize=10, horizontalalignment='center', verticalalignment='bottom')
+    _ax11 = get_standard_axis(axis=_ax11)
+    _ax11.set_xlabel('Cavity Length [nm]')
 
 
 if __name__ == '__main__':

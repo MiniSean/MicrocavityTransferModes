@@ -242,7 +242,12 @@ class LabeledPeakCollection(PeakCollection):
         if trans_mode is None:  # Sequence entire longitudinal mode slice
             # Create sequence data_slice
             cluster_array = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
-            value_slice = (np.mean(self.get_q_estimate(long_mode=long_mode)), np.mean(self.get_q_estimate(long_mode=long_mode + 1)))
+            low_bound = np.mean(self.get_q_estimate(long_mode=long_mode))
+            try:
+                high_bound = np.mean(self.get_q_estimate(long_mode=long_mode + 1))
+            except ValueError:
+                high_bound = self._mode_clusters[-1].get_avg_x
+            value_slice = (low_bound, high_bound)
             if value_slice[0] > value_slice[1]:  # Swap data_slice order to maintain (low, high) bound structure
                 value_slice = (value_slice[1], value_slice[0])
             return cluster_array, value_slice
@@ -257,10 +262,15 @@ class LabeledPeakCollection(PeakCollection):
         :return: List[ positions depending on all relevant transverse modes ].
         """
         sequence = self.get_labeled_clusters(long_mode=long_mode, trans_mode=None)
-        if len(sequence) < 2:
+        if len(sequence) < 3:
             raise ValueError(f'Not enough modes found to accurately estimate the position of ground mode q')
-        max_range = len(sequence) - 1
-        distances = [sequence[i + 1].get_avg_x - sequence[i].get_avg_x for i in range(max_range)]
+
+        mode_dist = sequence[2].get_avg_x - sequence[1].get_avg_x
+        fund_dist = sequence[1].get_avg_x - sequence[0].get_avg_x
+        fundamental_separation = max(1, int(fund_dist / mode_dist))
+        distances = [(fund_dist / fundamental_separation), ((fund_dist + mode_dist) / (fundamental_separation + 1))]
+        # max_range = len(sequence) - 1
+        # distances = [sequence[i + 1].get_avg_x - sequence[i].get_avg_x for i in range(max_range)]
         return [sequence[0].get_avg_x - dist for dist in distances]
 
     def get_measurement_data_slice(self, union_slice: Union[Tuple[float, float], Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray]:
@@ -336,7 +346,7 @@ class LabeledPeakCollection(PeakCollection):
         return [peak_cluster.get_avg_y for peak_cluster in self.get_clusters]
 
 
-def get_piezo_response(meas_class: Union[SyncMeasData, LabeledPeakCollection], **kwargs) -> Callable[[np.ndarray], np.ndarray]:
+def get_piezo_response(meas_class: Union[SyncMeasData, LabeledPeakCollection], verbose: bool = False, **kwargs) -> Callable[[np.ndarray], np.ndarray]:
     """
     Returns the fitted piezo-voltage to cavity-length response.
     **kwargs:
@@ -348,7 +358,7 @@ def get_piezo_response(meas_class: Union[SyncMeasData, LabeledPeakCollection], *
     else:
         initial_labeling = meas_class
     # Set voltage conversion function
-    return fit_piezo_response(cluster_collection=initial_labeling.get_q_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
+    return fit_piezo_response(cluster_collection=initial_labeling.get_q_clusters, sample_wavelength=SAMPLE_WAVELENGTH, verbose=verbose)
 
 
 def get_converted_measurement_data(meas_class: Union[SyncMeasData, LabeledPeakCollection], **kwargs) -> SyncMeasData:

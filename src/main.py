@@ -13,7 +13,7 @@
 from itertools import chain
 from src.import_data import FileToMeasData, DATA_DIR, import_npy
 from typing import Union, Iterable
-from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate, plot_allan_variance
+from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate, plot_allan_variance, plot_mode_classification
 from src.plot_iteration_mode_color import plot_pinned_focus_top, plot_pinned_focus_side, plot_pinned_track_top
 from src.cavity_radius_analysis import get_radius_estimate
 from src.peak_relation import get_converted_measurement_data
@@ -30,29 +30,32 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
     # Create measurement container instance
     measurement_container = FileToMeasData(meas_file=meas_file, samp_file=samp_file, filepath=filepath)
 
-    # Apply voltage to length conversion
-    measurement_container = get_converted_measurement_data(meas_class=measurement_container, q_offset=Q_OFFSET)
+    # (Report specific) Plot classification process
+    plot_mode_classification(meas_data=measurement_container)  # Plot
 
-    # Peak Identification
-    peak_collection = identify_peaks(meas_data=measurement_container)
-    # plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
-
-    # Peak clustering and mode labeling
-    labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection, q_offset=Q_OFFSET)
-    plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
-
-    # Normalized based on free-spectral-ranges (FSR)
-    normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
-    plot_peak_normalization_spectrum(collection=normalized_collection)  # Plot
-    plot_peak_normalization_overlap(collection=normalized_collection)  # Plot
-
-    # Estimate radius
-    [radius_mean, offset], [radius_std, offset_std] = get_radius_estimate(cluster_array=labeled_collection.get_clusters, wavelength=633)
-    plot_radius_estimate(collection=labeled_collection, radius_mean=radius_mean, offset=offset, radius_std=radius_std)  # Plot
-
-    # Analysis object
-    analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, collection=normalized_collection)
-    print(analysis_obj)
+    # # Apply voltage to length conversion
+    # measurement_container = get_converted_measurement_data(meas_class=measurement_container, q_offset=Q_OFFSET)
+    #
+    # # Peak Identification
+    # peak_collection = identify_peaks(meas_data=measurement_container)
+    # # plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
+    #
+    # # Peak clustering and mode labeling
+    # labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection, q_offset=Q_OFFSET)
+    # plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
+    #
+    # # Normalized based on free-spectral-ranges (FSR)
+    # normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
+    # plot_peak_normalization_spectrum(collection=normalized_collection)  # Plot
+    # plot_peak_normalization_overlap(collection=normalized_collection)  # Plot
+    #
+    # # Estimate radius
+    # [radius_mean, offset], [radius_std, offset_std] = get_radius_estimate(cluster_array=labeled_collection.get_clusters, wavelength=633)
+    # plot_radius_estimate(collection=labeled_collection, radius_mean=radius_mean, offset=offset, radius_std=radius_std)  # Plot
+    #
+    # # Analysis object
+    # analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, collection=normalized_collection)
+    # print(analysis_obj)
 
 
 def get_file_fetch_func(file_base_name: str, filepath: Union[str, None] = DATA_DIR):
@@ -118,8 +121,8 @@ if __name__ == '__main__':
     file_meas_base = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'
 
     # Multi measurement analysis tools
-    # global_focus = SplittingFocus(data=[(ModeID(9, 0), ModeID(8, 8, 0)), (ModeID(10, 0), ModeID(9, 8, 0)), (ModeID(11, 0), ModeID(10, 8, 0))])
-    multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(15, 30), samp_file=file_samp, filepath=file_path)
+    global_focus = SplittingFocus(data=[(ModeID(9, 0), ModeID(8, 8, 0)), (ModeID(10, 0), ModeID(9, 8, 0)), (ModeID(11, 0), ModeID(10, 8, 0))])
+    # multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(5), samp_file=file_samp, filepath=file_path)
 
     # # First
     # height_cutoff = 0.55
