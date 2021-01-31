@@ -1,10 +1,10 @@
 import numpy as np
-from typing import List, Union, Tuple, Dict, Callable
+from typing import List, Union, Tuple, Dict, Callable, Optional
 from src.import_data import SyncMeasData
 from src.peak_identifier import PeakCollection, PeakData, identify_peaks
 SAMPLE_WAVELENGTH = 633
 # cutoff = mean + c * std
-HEIGHT_SEPARATION = 0.55  # [0, 2]: Minimum height value between clusters-max to specify as new fundamental mode
+HEIGHT_SEPARATION = 0.65  # [0, 2]: Minimum height value between clusters-max to specify as new fundamental mode
 CLUSTER_SEPARATION = 0.1  # [0, 2]: Minimum distance value between peaks within a single cluster
 
 
@@ -113,8 +113,10 @@ class LabeledPeakCollection(PeakCollection):
     Contains dictionary with estimated (m + n = -1) or (planar) mode.
     """
 
-    def __init__(self, transmission_peak_collection: PeakCollection, q_offset: int = 0):
+    def __init__(self, transmission_peak_collection: PeakCollection, q_offset: int = 0, custom_height_cutoff: float = HEIGHT_SEPARATION, custom_cluster_seperation: float = CLUSTER_SEPARATION):
         self._q_offset = q_offset
+        self._custom_height_cutoff = custom_height_cutoff
+        self._custom_cluster_seperation = custom_cluster_seperation
         self._mode_clusters = self._set_labeled_clusters(transmission_peak_collection)  # Pre sample conversion
         super().__init__(flatten_clusters(data=self._mode_clusters))
         self.q_dict = self._set_q_dict(cluster_array=self._mode_clusters)
@@ -149,14 +151,14 @@ class LabeledPeakCollection(PeakCollection):
 
         mean = np.mean(mode_high_distances)
         std = np.std(mode_high_distances)
-        cut_off = (mean + HEIGHT_SEPARATION * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
+        cut_off = (mean + self._custom_height_cutoff * std)  # TODO: Hardcoded cut-off value for fundamental peak outliers
         fundamental_indices = [i for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] > cut_off]
         overlap_indices = [i-1 for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] < cut_off]
 
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
         # Order based on average y
         for i, cluster in enumerate(mode_clusters):
-            if i in fundamental_indices:  # Identify fundamental peaks
+            if i in fundamental_indices:  # and (len(ordered_clusters) != 0 or abs(cluster.get_avg_x - ordered_clusters[-1][0].get_avg_x) > SAMPLE_WAVELENGTH * .4):  # Identify fundamental peaks
                 ordered_clusters.append([cluster])
             elif len(ordered_clusters) == 0:
                 continue  # Skip junk peaks before first fundamental mode
@@ -272,15 +274,15 @@ class LabeledPeakCollection(PeakCollection):
         # Collect relevant x and y array from data class
         return data_class.x_boundless_data[data_slice[0]:data_slice[1]], data_class.y_boundless_data[data_slice[0]:data_slice[1]]
 
-    @staticmethod
-    def _get_clusters(peak_list: Union[List[PeakData], PeakCollection]) -> List[PeakCluster]:
+    # @staticmethod
+    def _get_clusters(self, peak_list: Union[List[PeakData], PeakCollection]) -> List[PeakCluster]:
         """Separates data points into clusters based on their mutual distance."""
         cluster_data = [peak.get_x for peak in peak_list]
         # Calculate mutual peak distances
         distances = [(cluster_data[i + 1] - cluster_data[i]) for i in range(len(cluster_data) - 1)]
         mean = np.mean(distances)
         std = np.std(distances)
-        cut_off = mean + CLUSTER_SEPARATION * std  # TODO: Hardcoded cluster separation
+        cut_off = mean + self._custom_cluster_seperation * std  # TODO: Hardcoded cluster separation
         # Detect statistical outliers
         outlier_indices = LabeledPeakCollection._get_outlier_indices(values=distances, cut_off=cut_off)
         # Construct cluster splitting
@@ -334,19 +336,22 @@ class LabeledPeakCollection(PeakCollection):
         return [peak_cluster.get_avg_y for peak_cluster in self.get_clusters]
 
 
-def get_piezo_response(meas_class: SyncMeasData, **kwargs) -> Callable[[np.ndarray], np.ndarray]:
+def get_piezo_response(meas_class: Union[SyncMeasData, LabeledPeakCollection], **kwargs) -> Callable[[np.ndarray], np.ndarray]:
     """
     Returns the fitted piezo-voltage to cavity-length response.
     **kwargs:
         - q_offset: (LabeledPeakCollection) determinse the starting fundamental mode
     """
     from src.sample_conversion import fit_piezo_response
-    initial_labeling = LabeledPeakCollection(identify_peaks(meas_class), **kwargs)
+    if isinstance(meas_class, SyncMeasData):
+        initial_labeling = LabeledPeakCollection(identify_peaks(meas_class), **kwargs)
+    else:
+        initial_labeling = meas_class
     # Set voltage conversion function
     return fit_piezo_response(cluster_collection=initial_labeling.get_q_clusters, sample_wavelength=SAMPLE_WAVELENGTH)
 
 
-def get_converted_measurement_data(meas_class: SyncMeasData, **kwargs) -> SyncMeasData:
+def get_converted_measurement_data(meas_class: Union[SyncMeasData, LabeledPeakCollection], **kwargs) -> SyncMeasData:
     """
     Returns updated meas_class with converted sample (x-axis) data.
     **kwargs:
@@ -354,8 +359,12 @@ def get_converted_measurement_data(meas_class: SyncMeasData, **kwargs) -> SyncMe
     """
     # Set voltage conversion function
     response_func = get_piezo_response(meas_class=meas_class, **kwargs)
-    meas_class.set_voltage_conversion(conversion_function=response_func)
-    return meas_class
+    if isinstance(meas_class, SyncMeasData):
+        result_meas_class = meas_class
+    else:
+        result_meas_class = meas_class._get_data_class
+    result_meas_class.set_voltage_conversion(conversion_function=response_func)
+    return result_meas_class
 
 
 def flatten_clusters(data: List[PeakCluster]) -> List[PeakData]:
