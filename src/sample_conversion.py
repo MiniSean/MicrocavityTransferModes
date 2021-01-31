@@ -42,7 +42,7 @@ def quality_factor(reflectance: float) -> float:
 
 
 # Piezoelectric transformations
-def voltage_to_length(a: float, b: float, c: float, initial_length: float) -> Callable[[np.ndarray], np.ndarray]:
+def voltage_to_length(a: float, b: float, c: float, d:float, initial_length: float) -> Callable[[np.ndarray], np.ndarray]:
     """
     Third-order polynomial describing the piezo-electric displacement depending on voltage.
     With an initial cavity length the corrected cavity length is calculated.
@@ -59,8 +59,9 @@ def voltage_to_length(a: float, b: float, c: float, initial_length: float) -> Ca
     :return: Total cavity length [nm]
     """
     def map_function(v: np.ndarray) -> np.ndarray:
-        # return initial_length - (a * v**3 + b * v**2 + c * v)
-        return initial_length - (v * c) * (1 - np.exp(-v * a))
+        return initial_length - (c * v + a * np.exp(- b * v) * np.sin(d * v))
+        # return (initial_length - (c * v + b * v**2 + a * v**3)
+        # return initial_length - (v * c) * (1 - np.exp(-v * a))
     return map_function
 
 
@@ -94,13 +95,19 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     # b = 13
     # c = 200
     # Exponential parameters
-    a = 0.15
-    b = 7.2
-    c = 310
+    # a = 0.15
+    # b = 7.2
+    # c = 310
+    # d = 1
+    # Exponential decay parameters
+    a = 83
+    b = .03
+    c = 300
+    d = .86
 
     # R = 2.7e4  # radius of curvature
     L0 = 3900
-    p0 = [a, b, c, L0]
+    p0 = [a, b, c, d, L0]
 
     # Mode samples
     q_offset = 0
@@ -109,16 +116,16 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     # m = np.asarray([mode.get_transverse_mode_id for mode in cluster_collection])
 
     # Fit function
-    def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _L0: float):
+    def fit_func(voltage_array: np.ndarray, _a: float, _b: float, _c: float, _d: float, _L0: float):
         """Return function to fit to 0: length = cavity_formula(length) + L1 (self consistency)"""
-        length = voltage_to_length(a=_a, b=_b, c=_c, initial_length=_L0)(voltage_array)
+        length = voltage_to_length(a=_a, b=_b, c=_c, d=_d, initial_length=_L0)(voltage_array)
         theory_length = length_mode_consistency(wavelength=sample_wavelength)(q)
         return length - theory_length
 
     # Fitting
     # logging.warning(f'Start voltage to nm conversion fitting (using q* = q - {q_offset})')
     popt, pcov = curve_fit(fit_func, xdata=x_array, ydata=np.zeros(len(x_array)), p0=p0, maxfev=100000)
-    a, b, c, L0 = popt
+    a, b, c, d, L0 = popt
 
     # # Temp
     # print(popt)
@@ -127,10 +134,10 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     print(f'Cavity initial length: {L0} [nm]')
 
     # Plot
-    voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, initial_length=L0)(v)
+    voltage_map = lambda v: voltage_to_length(a=a, b=b, c=c, d=d, initial_length=L0)(v)
     if verbose:
-        cavity_map = lambda d: length_mode_consistency(wavelength=sample_wavelength)(q)
-        plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, L0), length_map=voltage_map, cavity_map=cavity_map)
+        cavity_map = lambda x: length_mode_consistency(wavelength=sample_wavelength)(q)
+        plot_response_mapping(cluster_collection=cluster_collection, q_offset=q_offset, fit_function=lambda x: fit_func(x, a, b, c, d, L0), length_map=voltage_map, cavity_map=cavity_map)
 
     print(f'Cavity offset length (lowest q*={int(q_offset)}): {np.min(voltage_map(x_array))} [nm]')
     # return Piezo behaviour function
@@ -138,10 +145,8 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     return voltage_map
 
 
-# fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
-
-
 def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset: int, fit_function: Callable[[np.ndarray], np.ndarray], length_map: Callable[[np.ndarray], np.ndarray], cavity_map: Callable[[np.ndarray], np.ndarray]):
+    fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
     # Mode samples
     x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
     x_std_array = np.asarray([mode.get_std_x for mode in cluster_collection])
