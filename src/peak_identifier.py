@@ -3,7 +3,7 @@ from typing import List, Tuple
 from scipy.signal import find_peaks, peak_prominences
 from src.import_data import SyncMeasData
 # cutoff = mean + c * std
-PEAK_PROMINENCE = 1.  # [0, 2]: Minimum peak-prominence value required to be detected
+PEAK_PROMINENCE = 1.2  # [0, 2]: Minimum peak-prominence value required to be detected
 
 
 class PeakData(float):
@@ -67,9 +67,9 @@ class PeakCollection:
         return self._list.index(*args, **kwargs)
 
 
-def identify_peaks(meas_data: SyncMeasData) -> PeakCollection:
+def identify_peaks(meas_data: SyncMeasData, custom_peak_prominence: float = PEAK_PROMINENCE) -> PeakCollection:
     peak_prominence = identify_peak_prominence(meas_data)[0]  # Average peak prominence
-    cutoff_prominence = np.mean(peak_prominence) + PEAK_PROMINENCE * np.std(peak_prominence)
+    cutoff_prominence = np.mean(peak_prominence) + custom_peak_prominence * np.std(peak_prominence)
     peak_indices, properties = find_peaks(x=meas_data.y_data, prominence=cutoff_prominence, distance=3)  # Arbitrary distance value
     peak_collection = PeakCollection([PeakData(data=meas_data, index=i) for i in peak_indices])
     return peak_collection
