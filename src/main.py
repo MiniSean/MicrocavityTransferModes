@@ -13,7 +13,7 @@
 from itertools import chain
 from src.import_data import FileToMeasData, DATA_DIR, import_npy
 from typing import Union, Iterable
-from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate, plot_allan_variance, plot_mode_classification
+from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate, plot_allan_variance, plot_mode_classification, plot_mode_distances
 from src.plot_iteration_mode_color import plot_pinned_focus_top, plot_pinned_focus_side, plot_pinned_track_top
 from src.cavity_radius_analysis import get_radius_estimate
 from src.peak_relation import get_converted_measurement_data
@@ -30,19 +30,19 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
     # Create measurement container instance
     measurement_container = FileToMeasData(meas_file=meas_file, samp_file=samp_file, filepath=filepath)
 
-    # (Report specific) Plot classification process
-    plot_mode_classification(meas_data=measurement_container)  # Plot
+    # # # (Report specific) Plot classification process
+    # plot_mode_classification(meas_data=measurement_container)  # Plot
 
-    # # Apply voltage to length conversion
-    # measurement_container = get_converted_measurement_data(meas_class=measurement_container, q_offset=Q_OFFSET)
-    #
-    # # Peak Identification
-    # peak_collection = identify_peaks(meas_data=measurement_container)
-    # # plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
-    #
-    # # Peak clustering and mode labeling
-    # labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection, q_offset=Q_OFFSET)
-    # plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
+    # Apply voltage to length conversion
+    measurement_container = get_converted_measurement_data(meas_class=measurement_container, q_offset=Q_OFFSET, verbose=False)
+
+    # Peak Identification
+    peak_collection = identify_peaks(meas_data=measurement_container)
+    # plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
+
+    # Peak clustering and mode labeling
+    labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection, q_offset=Q_OFFSET)
+    plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
     #
     # # Normalized based on free-spectral-ranges (FSR)
     # normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
@@ -56,6 +56,9 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
     # # Analysis object
     # analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, collection=normalized_collection)
     # print(analysis_obj)
+
+    # Plot mode distance scaling
+    plot_mode_distances(collection=labeled_collection)  # Plot
 
 
 def get_file_fetch_func(file_base_name: str, filepath: Union[str, None] = DATA_DIR):
