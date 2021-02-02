@@ -174,6 +174,7 @@ class LabeledPeakCollection(PeakCollection):
         for long_mode_id, cluster_array in enumerate(ordered_clusters):
             cluster_dict = {}  # For fundamental en first transverse mode
             for trans_mode_id, cluster in enumerate(cluster_array):
+                # result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id + self._q_offset, trans_mode=trans_mode_id))
                 # Determine spaced trans mode
                 peak_cluster = PeakCluster(data=cluster)
                 if trans_mode_id < 2:
