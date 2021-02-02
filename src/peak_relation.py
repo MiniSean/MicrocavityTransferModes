@@ -172,8 +172,21 @@ class LabeledPeakCollection(PeakCollection):
         # Iterate and label
         result = []
         for long_mode_id, cluster_array in enumerate(ordered_clusters):
+            cluster_dict = {}  # For fundamental en first transverse mode
             for trans_mode_id, cluster in enumerate(cluster_array):
-                result.append(LabeledPeakCluster(data=cluster._list, long_mode=long_mode_id + self._q_offset, trans_mode=trans_mode_id))
+                # Determine spaced trans mode
+                peak_cluster = PeakCluster(data=cluster)
+                if trans_mode_id < 2:
+                    labeled_cluster = LabeledPeakCluster(data=peak_cluster, long_mode=long_mode_id + self._q_offset, trans_mode=trans_mode_id)
+                    cluster_dict[trans_mode_id] = labeled_cluster
+                else:
+                    max_mode_id = max(cluster_dict.keys())
+                    single_mode_spacing = abs(cluster_dict[0].get_avg_x - cluster_dict[1].get_avg_x)
+                    predicted_trans_mode = max_mode_id + int(round(abs(cluster_dict[max_mode_id].get_avg_x - peak_cluster.get_avg_x) / single_mode_spacing))
+                    predicted_trans_mode = max(max_mode_id + 1, predicted_trans_mode)  # Force naturally increasing trans modes
+                    labeled_cluster = LabeledPeakCluster(data=peak_cluster, long_mode=long_mode_id + self._q_offset, trans_mode=predicted_trans_mode)
+                    cluster_dict[predicted_trans_mode] = labeled_cluster
+                result.append(labeled_cluster)
         return result  # [peak_data for peak_data in optical_mode_collection]
 
     def _set_q_dict(self, cluster_array: List[LabeledPeakCluster]) -> Dict[int, Union[LabeledPeakCluster, None]]:
