@@ -238,12 +238,12 @@ def plot_mode_classification(meas_data: SyncMeasData) -> plt.axes:
             cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=i)
             # Get normalized measurement
             x_sample, y_measure = labeled_collection.get_measurement_data_slice(union_slice=value_slice)
-            _ax10.plot(x_sample, y_measure, alpha=1, color=colors[cluster_array[0].get_longitudinal_mode_id - min_q])
+            _ax10.plot(x_sample, y_measure, alpha=1, color=colors[(cluster_array[0].get_longitudinal_mode_id - min_q) % len(colors)])
         except AttributeError:
             break
     for i, peak_data in enumerate(labeled_collection):
         if peak_data.relevant:
-            _ax10.plot(peak_data.get_x, peak_data.get_y, 'x', color=colors[peak_data.get_transverse_mode_id - min_q], alpha=1)
+            _ax10.plot(peak_data.get_x, peak_data.get_y, 'x', color=colors[(peak_data.get_transverse_mode_id - min_q)  % len(colors)], alpha=1)
     _ax10.set_xlabel('Voltage [V]')
 
     # Plot finalized labeled peaks
@@ -259,7 +259,7 @@ def plot_mode_classification(meas_data: SyncMeasData) -> plt.axes:
             cluster_array, value_slice = labeled_collection.get_mode_sequence(long_mode=i)
             # Get normalized measurement
             x_sample, y_measure = labeled_collection.get_measurement_data_slice(union_slice=value_slice)
-            _ax11.plot(x_sample, y_measure, alpha=.2, color=colors[cluster_array[0].get_longitudinal_mode_id - min_q])
+            _ax11.plot(x_sample, y_measure, alpha=.2, color=colors[(cluster_array[0].get_longitudinal_mode_id - min_q) % len(colors)])
         except AttributeError:
             print(i, f'break out of mode sequence')
             break
@@ -269,7 +269,7 @@ def plot_mode_classification(meas_data: SyncMeasData) -> plt.axes:
             plt.gca().set_prop_cycle(None)
         for peak_data in cluster:
             if peak_data.relevant:
-                _ax11.plot(peak_data.get_x, peak_data.get_y, 'x', color=colors[peak_data.get_transverse_mode_id - min_q], alpha=1)
+                _ax11.plot(peak_data.get_x, peak_data.get_y, 'x', color=colors[(peak_data.get_transverse_mode_id - min_q) % len(colors)], alpha=1)
         _ax11.text(x=cluster.get_avg_x, y=cluster.get_max_y, s=f'({cluster.get_longitudinal_mode_id}, {cluster.get_transverse_mode_id})', fontsize=10, horizontalalignment='center', verticalalignment='bottom')
     _ax11 = get_standard_axis(axis=_ax11)
     _ax11.set_xlabel('Cavity Length [nm]')
