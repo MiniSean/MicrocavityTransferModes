@@ -275,6 +275,29 @@ def plot_mode_classification(meas_data: SyncMeasData) -> plt.axes:
     _ax11.set_xlabel('Cavity Length [nm]')
 
 
+def plot_mode_distances(collection: LabeledPeakCollection) -> plt.axes:
+    _, _ax = plt.subplots()
+    # Cycle longitudinal modes
+    min_q = min(collection.q_dict.keys())
+    mode_sequence_range = range(min_q+1, max(collection.q_dict.keys()) + 2)
+    for i in mode_sequence_range:
+        cluster_array = collection.get_labeled_clusters(long_mode=i, trans_mode=None)
+        cluster_dict = {cluster.get_transverse_mode_id: cluster for cluster in cluster_array}
+        xs = list(range(max(cluster_dict.keys()) + 1))
+        ys = list(range(len(xs)))
+        for j in range(len(xs)):
+            if j in cluster_dict:
+                xs[j] = j
+                ys[j] = cluster_dict[j].get_avg_x - cluster_dict[0].get_avg_x
+            else:
+                xs[j] = float('nan')
+                ys[j] = float('nan')
+        _ax.plot(xs, ys, ls='-', label=f'q={i}')
+    _ax.set_title(f'linearity of transverse mode distances')
+    _ax.grid(True)
+    plt.legend()
+
+
 if __name__ == '__main__':
     # Define file name to retrieve from predefined data path
     file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0'
