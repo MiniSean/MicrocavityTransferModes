@@ -7,6 +7,7 @@ from src.import_data import SyncMeasData
 from src.plot_functions import get_standard_axis
 from src.plot_iteration_mode import most_frequent
 from src.peak_relation import LabeledPeakCollection, get_value_to_data_slice, find_nearest_index, LabeledPeakCluster, SAMPLE_WAVELENGTH, flatten_clusters
+from src.peak_normalization import NormalizedPeakCollection, NormalizedPeak
 
 
 def pad_to_dense(nested_array: List[np.ndarray]) -> Tuple[np.ndarray, Tuple[int, int]]:
@@ -39,17 +40,27 @@ def store_peak_data(dictionary: Dict[Tuple[int, int, int], Tuple[List[float], Li
     """Returns dictionary in format: Dict[Tuple[long, trans, index], Tuple[List[pos_value], List[pos_index]]]"""
     for cluster in cluster_array:
         for k, peak in enumerate(cluster):
+            # Get position
+            if isinstance(peak, NormalizedPeak):
+                peak_pos = peak.get_norm_x
+            else:
+                peak_pos = peak.get_x
+            # Dictionary key
             key = (cluster.get_longitudinal_mode_id, cluster.get_transverse_mode_id, k)
             if key in dictionary:
-                dictionary[key][0].append(peak.get_x)
+                dictionary[key][0].append(peak_pos)
                 dictionary[key][1].append(find_nearest_index(array=data_class.x_boundless_data, value=peak.get_x))
             else:
-                dictionary[key] = ([peak.get_x], [find_nearest_index(array=data_class.x_boundless_data, value=peak.get_x)])
+                dictionary[key] = ([peak_pos], [find_nearest_index(array=data_class.x_boundless_data, value=peak.get_x)])
     return dictionary
 
 
 def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection], pin: Tuple[int, int]):
     """Create side-view plot which pins single modes"""
+    label_font_size = 18
+    decimal_rounding = 4
+    unit = 'nm'  # r'$\Delta \tilde{L}$'
+    rand_offset = 277.67
 
     # Filter consistent measurement peaks
     def filter_collection(iterator: Iterable[LabeledPeakCollection]) -> Iterable[LabeledPeakCollection]:
@@ -93,7 +104,8 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
         total_data_slice = get_value_to_data_slice(data_class=data_class, value_slice=pin_value_slice)
         total_data_slice_array.append(total_data_slice)  # Store data slice
         # Define focus peak index offset
-        first_peak_offset = peak_dict[(pin[0], pin[1], 0)][1][-1] - total_data_slice[0]
+        first_peak_index = peak_dict[(pin[0], pin[1], 0)][1][-1]
+        first_peak_offset = first_peak_index - total_data_slice[0]
         total_pin_peak_index.append(first_peak_offset)
         # Store transmission data
         x_array, y_array = np.asarray(collection.get_measurement_data_slice(union_slice=total_data_slice))
@@ -126,8 +138,8 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
     # Plot mean and std peak locations
     y_bot, y_top = ax.get_ylim()
     pos_text_height = y_bot + 0.95 * (y_top - y_bot)  # Data coordinates
-    diff_text_upper_height = y_bot + 0.065 * (y_top - y_bot)
-    diff_text_lower_height = y_bot + 0.062 * (y_top - y_bot)
+    diff_text_upper_height = y_bot + 0.060 * (y_top - y_bot)
+    diff_text_lower_height = y_bot + 0.058 * (y_top - y_bot)
     plot_peak_pos = {}
     ax.plot(np.NaN, np.NaN, '-', color='none', label=r'$\mu$, $\sigma$')
     for i in range(20):
@@ -140,13 +152,13 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
             #     continue
             avg_pos_value = np.mean(pos_array)  # Sum / Count [nm]
             std_pos_value = np.std(pos_array)
-            mean = round((avg_pos_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
-            std = round((std_pos_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
+            mean = round((avg_pos_value), decimal_rounding) - rand_offset  # / (SAMPLE_WAVELENGTH / 2), 3)
+            std = round((std_pos_value), decimal_rounding)  # / (SAMPLE_WAVELENGTH / 2), 3)
             avg_pos_data = np.mean([peak_index - pre_skip[i] - total_data_slice_array[i][0] for i, peak_index in enumerate(peak_dict[key][1])])
-            ax.axvline(x=avg_pos_data, color='r', ls='--', label=f'({i}): {mean}'+r'$\pm$'+f'{std} [nm]')
+            ax.axvline(x=avg_pos_data, color='r', ls='--', label=f'({i}): {mean}'+r'$\pm$'+f'{std} [{unit}]')
             # ax.text(x=avg_pos_data, y=pos_text_height, s=r'$\mu=$' + f' {mean},\n' + r'$\sigma=$ ' + f'{std} [nm]', horizontalalignment='center', fontsize=12)
             # ax.plot(np.NaN, np.NaN, '-', color='none', label=f'({i}): {mean}'+r'$\pm$'+f'{std} [nm]')
-            ax.text(x=avg_pos_data, y=pos_text_height, s=f'({i})', horizontalalignment='center', fontsize=12)
+            ax.text(x=avg_pos_data, y=pos_text_height, s=f'({i})', horizontalalignment='center', fontsize=label_font_size)
             plot_peak_pos[i] = avg_pos_data
         else:
             break  # No higher index peaks available
@@ -162,18 +174,17 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
             distances = np.asarray(pos_array_second) - np.asarray(pos_array_first)
             avg_dist_value = np.mean(distances)
             std_dist_value = np.std(distances)
-            mean = round((avg_dist_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
-            std = round((std_dist_value), 2)  # / (SAMPLE_WAVELENGTH / 2), 3)
+            mean = round((avg_dist_value), decimal_rounding)  # / (SAMPLE_WAVELENGTH / 2), 3)
+            std = round((std_dist_value), decimal_rounding)  # / (SAMPLE_WAVELENGTH / 2), 3)
             ax.plot(np.NaN, np.NaN, '-', color='none') #, label=f'({i}->{i+1}) : ' + r'$\mu=$' + f' {mean}' + r', $\sigma=$ ' + f'{std} [nm]')
             mid_peak_pos = int((plot_peak_pos[i+1] - plot_peak_pos[i])/2. + plot_peak_pos[i])
-            text = ax.text(x=mid_peak_pos, y=diff_text_upper_height if i % 2 == 0 else diff_text_lower_height, s=f'({i}->{i+1})\n' + r'$\mu=$' + f' {mean} [nm]\n' + r'$\sigma=$ ' + f'{std} [nm]', horizontalalignment='center', fontsize=12)
+            text = ax.text(x=mid_peak_pos, y=diff_text_upper_height if i % 2 == 0 else diff_text_lower_height, s=f'({i}->{i+1})\n' + r'$\mu=$' + f' {mean} [{unit}]\n' + r'$\sigma=$ ' + f'{std} [{unit}]', horizontalalignment='center', fontsize=label_font_size)
             text.set_bbox(dict(facecolor='white', alpha=0.9, edgecolor='white'))
         else:
             break
     # Set plot layout
     locs, labels = plt.xticks()
     # xticks = [int(lead_data_class.x_boundless_data[int(index_offset + index)]) for index in locs[0:-1]]
-    # print(xticks)
 
     # Successful averaging
     xticks = []
@@ -182,18 +193,17 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
         data_values = []
         for i, _data_class in enumerate(data_class_array):
             data_values.append(_data_class.x_boundless_data[int(total_data_slice_array[i][0] + index)])
-        xticks.append(round(np.mean(data_values), 2))
+        xticks.append(round(np.mean(data_values) - rand_offset, decimal_rounding))
         std_ticks.append(np.std(data_values))
-    # print(xticks)
 
     plt.xticks(locs[0:-1], xticks)
     plt.xlim(locs[1], locs[-1])
     # pin = (7, 8)
-    plt.title(f'Focus mode (q={pin[0]}, m+n={pin[1]}, {iter_count} iterations)')
+    # plt.title(f'Focus mode (q={pin[0]}, m+n={pin[1]}, {iter_count} iterations)')
     ax = get_standard_axis(axis=ax)
-    ax.set_xlabel('Cavity Length ('+ r'$\pm$' + f'{round(np.mean(std_ticks), 1)}' + ') [nm]')  # Voltage [V]
+    ax.set_xlabel('Cavity Length [nm] ('+ r'$\pm$' + f'{round(np.mean(std_ticks), decimal_rounding)}' + f') [{unit}]')  # Voltage [V]
     plt.grid(True)
-    plt.legend(loc=1, prop={'size': 12})  # bbox_to_anchor=(1.05, 1), loc='upper left',
+    plt.legend(loc=1, prop={'size': label_font_size})  # bbox_to_anchor=(1.05, 1), loc='upper left',
     # plt.tight_layout(pad=1.08, w_pad=0.1, h_pad=0.1, rect=(0, 0, 1, 1))
 
 
