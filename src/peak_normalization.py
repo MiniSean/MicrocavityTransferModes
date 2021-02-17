@@ -66,8 +66,8 @@ class NormalizedPeakCollection(LabeledPeakCollection):
     LabeledPeakCollection with additional normalization functionality to the labeled peak collection.
     """
 
-    def __init__(self, transmission_peak_collection: PeakCollection):
-        super().__init__(transmission_peak_collection)  # Constructs q_dict
+    def __init__(self, transmission_peak_collection: PeakCollection, **kwargs):
+        super().__init__(transmission_peak_collection, **kwargs)  # Constructs q_dict
         # Update internals to represent normalized peak data
         self._mode_clusters = self._set_norm_peaks(self._list)
         self._list = flatten_clusters(data=self._mode_clusters)  # Update internal collection with normalized data

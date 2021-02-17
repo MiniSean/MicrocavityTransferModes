@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 # import logging
 from typing import Tuple, Optional, List, Callable
-DATA_DIR = 'data/Trans/20210104'
+DATA_DIR = 'data/Trans/20210120'
 ICAP_DIR = 'data/ICCaptures'
 
 
@@ -93,8 +93,8 @@ class SyncMeasData:
 
 class FileToMeasData(SyncMeasData):
 
-    def __init__(self, meas_file: str, samp_file: str, filepath: str = DATA_DIR):
-        super().__init__(import_npy(meas_file, filepath)[0], import_npy(samp_file, filepath))
+    def __init__(self, meas_file: str, samp_file: str, filepath: str = DATA_DIR, **kwargs):
+        super().__init__(import_npy(meas_file, filepath)[0], import_npy(samp_file, filepath), **kwargs)
 
 
 def import_npy(filename: str, filepath: str = DATA_DIR) -> np.ndarray:

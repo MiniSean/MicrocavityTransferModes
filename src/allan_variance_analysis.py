@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Union, Iterable, Dict, Any, Tuple, List
 from src.import_data import import_npy
-from src.peak_relation import LabeledPeakCollection
-LM_ARRAY = [0, 1, 2, 3, 4, 5, 6]
+from src.peak_relation import LabeledPeakCollection, find_nearest_index
+LM_ARRAY = [4, 5, 6]
 TM_ARRAY = [0, 1, 2]
 
 
@@ -12,11 +12,11 @@ def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[T
     :return: ((t_l, t_t), (dt_l, dt_t)) : (#, diff_squared, diff_abs)
     """
     cluster_array = collection.get_clusters
-    lim_cluster_array = []
-    for cluster in cluster_array:
-        if cluster.get_longitudinal_mode_id not in LM_ARRAY:
-            continue
-        lim_cluster_array.append(cluster)
+    lim_cluster_array = [cluster for cluster in cluster_array if cluster.get_longitudinal_mode_id in LM_ARRAY and cluster.get_transverse_mode_id in TM_ARRAY]
+    # for cluster in cluster_array:
+    #     if cluster.get_longitudinal_mode_id not in LM_ARRAY:
+    #         continue
+    #     lim_cluster_array.append(cluster)
 
     for i, cluster_t in enumerate(lim_cluster_array):
         t_l = cluster_t.get_longitudinal_mode_id
@@ -32,22 +32,25 @@ def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[T
                 for q, peak_dt in enumerate(cluster_dt):
                     if i == j and q <= p:
                         continue
-                    if t_t not in TM_ARRAY or dt_t not in TM_ARRAY:
-                        continue
+                    elif i != j:
+                        p, q = 0, 0
+                        abs_difference = abs(cluster_dt.get_avg_x - cluster_t.get_avg_x)
+                    else:
+                        abs_difference = peak_dt.get_x - peak_t.get_x
+                    # abs_difference = peak_dt.get_x - peak_t.get_x
 
-                    # Collect data
-                    abs_difference = peak_dt.get_x - peak_t.get_x
-                    # abs_difference = np.abs(cluster_dt.get_avg_x - cluster_t.get_avg_x)
                     # Memory save storage
                     key = ((t_l, t_t, p), (dt_l, dt_t, q))
+                    # key = (dt_l - t_l, dt_t - t_t, q - p)
                     if key not in pass_dict:
-                        pass_dict[key] = ([abs_difference], [abs(abs_difference)/scan_velocity])
+                        pass_dict[key] = ([abs_difference], [abs_difference/scan_velocity])
                     else:
                         pass_dict[key][0].append(abs_difference)
                         pass_dict[key][1].append(abs_difference/scan_velocity)
     return pass_dict
 
 
+# Deprecated
 def extract_mode_separation_array(collection: LabeledPeakCollection, pass_array: List[Tuple[float, float]], scan_velocity: float) -> List[Tuple[float, float]]:
     cluster_array = collection.get_clusters
     for i, cluster_t in enumerate(cluster_array):
@@ -62,9 +65,10 @@ def extract_mode_separation_array(collection: LabeledPeakCollection, pass_array:
     return pass_array
 
 
-def get_outlier_based_variance(ref_array: List[Tuple[float, float]]) -> Tuple[List[float], List[float]]:
+# Deprecated
+def get_outlier_based_variance(ref_array: Iterable[Tuple[List[float], List[float]]]) -> Tuple[List[float], List[float]]:
     # Sort based on delta time
-    _ref_array = [(sqrt_diff, dt) for sqrt_diff, dt in sorted(ref_array, key=lambda pair: pair[1])]
+    _ref_array = [(sqrt_diff[i], dt[i]) for sqrt_diff, dt in sorted(ref_array, key=lambda pair: pair[1]) for i in range(len(dt))]
 
     # Cluster data points together
     sorted_distances = [sqrt_diff for sqrt_diff, _ in _ref_array]
@@ -73,7 +77,7 @@ def get_outlier_based_variance(ref_array: List[Tuple[float, float]]) -> Tuple[Li
     time_distances = [(sorted_delta_time[i + 1] - sorted_delta_time[i]) for i in range(len(sorted_delta_time) - 1)]
     mean = np.mean(time_distances)
     std = np.std(time_distances)
-    cut_off = mean + 2 * std  # TODO: Hardcoded time interval separation
+    cut_off = mean + 1.5 * std  # TODO: Hardcoded time interval separation
     # Detect statistical outliers
     outlier_indices = LabeledPeakCollection._get_outlier_indices(values=time_distances, cut_off=cut_off)
     # Construct cluster splitting
@@ -83,32 +87,48 @@ def get_outlier_based_variance(ref_array: List[Tuple[float, float]]) -> Tuple[Li
     return x_array, y_array
 
 
-def get_time_interval_variance(ref_array: List[Tuple[float, float]], steps: int) -> Tuple[List[float], List[float]]:
-    t_step = int(len(ref_array) / steps)
-    split_indices = tuple(i * t_step for i in range(steps)) + (len(ref_array) + 1,)
+# Deprecated
+def get_time_interval_variance(ref_array: Iterable[Tuple[List[float], List[float]]], steps: int) -> Tuple[List[float], List[float]]:
+    # Sort based on delta time
+    _ref_array = [(sqrt_diff[i], dt[i]) for sqrt_diff, dt in sorted(ref_array, key=lambda pair: pair[1]) for i in range(len(dt))]
+    sorted_distances = [sqrt_diff for sqrt_diff, _ in _ref_array]
+    sorted_delta_time = [time for _, time in _ref_array]
+
+    t_step = (_ref_array[-1][1] - _ref_array[0][1]) / steps
+    split_times = tuple(find_nearest_index(sorted_delta_time, i * t_step) for i in range(steps + 1))
 
     # Sort based on delta time
     _ref_array = [(sqrt_diff, dt) for sqrt_diff, dt in sorted(ref_array, key=lambda pair: pair[1])]
 
     # Cluster data points together
-    sorted_distances = [sqrt_diff for sqrt_diff, _ in _ref_array]
-    sorted_delta_time = [time for _, time in _ref_array]
-    y_array = [np.var(sorted_distances[start: end]) for start, end in zip(split_indices, split_indices[1:])]
-    x_array = [np.mean(sorted_delta_time[start: end]) for start, end in zip(split_indices, split_indices[1:])]
+    y_array = [np.var(sorted_distances[start: end]) for start, end in zip(split_times, split_times[1:])]
+    x_array = [np.mean(sorted_delta_time[start: end]) for start, end in zip(split_times, split_times[1:])]
     return x_array, y_array
 
 
 def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], scan_velocity: float) -> Tuple[np.ndarray, np.ndarray]:
     """Calculates Allan variance of transmission spectrum"""
     if scan_velocity == 0:
-        raise ValueError('Scan velocity needs to be a finite positive number')
+        raise ValueError('Scan velocity needs to be a finite positive non-zero number')
     reference_dict = {}
-    reference_array = []
 
     # Collect data
     for collection in collection_iterator:
         reference_dict = extract_mode_separation(collection=collection, pass_dict=reference_dict, scan_velocity=scan_velocity)
-        # reference_array = extract_mode_separation_array(collection=collection, pass_array=reference_array, scan_velocity=scan_velocity)
+
+    # # Order dictionary
+    # ordered_dict = {}
+    # for ((t_l, t_t, p), (dt_l, dt_t, q)), (abs_diff_array, delta_time_array) in reference_dict.items():
+    #     key = (dt_l - t_l, dt_t - t_t)
+    #     if key not in ordered_dict:
+    #         ordered_dict[key] = (abs_diff_array, delta_time_array)
+    #     else:
+    #         ordered_dict[key][0].extend(abs_diff_array)
+    #         ordered_dict[key][1].extend(delta_time_array)
+
+
+    # Sorted
+    # x_array, y_array = get_time_interval_variance(ref_array=reference_dict.values(), steps=14)
 
     # Average data
     y_array = []
@@ -118,83 +138,17 @@ def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], sca
             continue
         y_var = np.var(abs_diff_array)
         x_var = np.mean(delta_time_array)
-        if y_var > 200:  # Outlier
-            continue
+        # if y_var > 200:  # Outlier
+        #     continue
 
         y_array.append(y_var)
         x_array.append(x_var)
-    # TEMP
-    plt.plot(x_array, y_array, '.')
-    # Special FSR
-    y_array_0X = []
-    x_array_0X = []
-    y_array_1X = []
-    x_array_1X = []
-    y_array_6X = []
-    x_array_6X = []
-    for key in reference_dict.keys():
-        ((t_l, t_t, p), (dt_l, dt_t, q)) = key
-        if t_l == 0 and dt_l != 0:
-            y_array_0X.append(np.var(reference_dict[key][0]))
-            x_array_0X.append(np.mean(reference_dict[key][1]))
-        if t_l == 1 and dt_l > 1:
-            y_array_1X.append(np.var(reference_dict[key][0]))
-            x_array_1X.append(np.mean(reference_dict[key][1]))
-        if t_l == 6 and dt_l > 6:
-            y_array_1X.append(np.var(reference_dict[key][0]))
-            x_array_1X.append(np.mean(reference_dict[key][1]))
 
-    plt.plot(x_array_0X, y_array_0X, '.', label=f'1st FSR')
-    plt.plot(x_array_1X, y_array_1X, '.', label=f'2nd FSR')
-    plt.plot(x_array_6X, y_array_6X, '.', label=f'6th FSR')
-    plt.legend()
+    # # Average data
+    # y_array = []
+    # x_array = []
+    # for abs_diff_array, delta_time_array in reference_dict.values():
+    #     y_array.extend(abs_diff_array)
+    #     x_array.extend(delta_time_array)
 
     return np.asarray(x_array), np.asarray(y_array)
-
-
-def file_fetch_function(iteration: int) -> Union[str, FileNotFoundError]:
-    filename = 'transrefl_hene_1s_10V_PMT4_rate1300000.0itteration{}'.format(iteration)
-    try:
-        import_npy(filename=filename)
-    except FileNotFoundError:
-        raise FileNotFoundError(f'File does not exist in pre-defined directory')
-    return filename
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    from src.import_data import FileToMeasData
-    from src.peak_identifier import identify_peaks
-    from src.peak_relation import get_converted_measurement_data
-    # Reference files
-    file_samp = 'samples_1s_10V_rate1300000.0'
-
-    def get_collections(iter_count: int) -> Iterable[LabeledPeakCollection]:
-        for i in range(iter_count):
-            try:
-                filename = file_fetch_function(iteration=i)
-                measurement_class = FileToMeasData(meas_file=filename, samp_file=file_samp)
-                measurement_class = get_converted_measurement_data(meas_class=measurement_class)
-                labeled_collection = LabeledPeakCollection(identify_peaks(meas_data=measurement_class))
-                yield labeled_collection
-            except FileNotFoundError:
-                break
-
-    iter_count = 30
-    scan_speed = 3500
-    _x, allan_variance_y = get_allan_variance(collection_iterator=get_collections(iter_count=iter_count), scan_velocity=scan_speed)
-    # plt.plot(_x, allan_variance_y, '.')
-
-    # Define font
-    font_size = 22
-    plt.rcParams.update({'font.size': font_size})
-
-    # plt.title(f'Allan variance. FSR: {LM_ARRAY[0]}-{LM_ARRAY[-1]}, N: {TM_ARRAY[0]}-{TM_ARRAY[-1]}. ({iter_count} iterations)')
-    plt.ylabel(f'Variance' + r' $\langle [x(t + \delta t) - x(t)]^2 \rangle$ $[nm^2]$', fontsize=font_size)
-    plt.xlabel(f'Time step' + r' $\delta t[s]$', fontsize=font_size)
-    plt.yscale('log')
-    # plt.xscale('log')
-    # plt.ylim([0, 200000])
-    plt.grid(True)
-
-    plt.show()
