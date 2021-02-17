@@ -128,26 +128,12 @@ class LabeledPeakCollection(PeakCollection):
         :return: Array of LabeledPeakCluster.
         """
         mode_clusters = self._get_clusters(peak_list=optical_mode_collection)  # Construct clusters
-        # Overlap separation
-        # for mode in mode_clusters:
-        #     peak_height = sorted([peak.get_y for peak in mode], key=lambda x: -x)
-        #     peak_height_distances = [peak_height[i] - peak_height[i + 1] for i in range(len(peak_height) - 1)]
-        #     if len(peak_height_distances) < 2:
-        #         continue
-        #
-        #     mean = np.mean(peak_height_distances)
-        #     std = np.std(peak_height_distances)
-        #     cut_off = (mean + 2.5 * std)
-        #     outlier_indices = LabeledPeakCollection._get_outlier_indices(values=peak_height_distances, cut_off=cut_off)
-        #     if len(outlier_indices) > 0:
-        #         print(mode.get_avg_x, len(outlier_indices))
-        #         temp.append(mode.get_avg_x)
 
         sort_key = mode_clusters[0][0]._data.sort_key  # Cluster sorting key (Small-to-Large [nm] or Large-to-Small [V])
         mode_clusters = sorted(mode_clusters, key=lambda x: sort_key(x.get_avg_x))  # Sort clusters from small to large cavity
 
-        mode_high_distances = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-1].get_max_y)) for i in range(len(mode_clusters)-1)]
-        mode_high_distances_2nd = [(np.log(mode_clusters[i].get_max_y) - np.log(mode_clusters[i-2].get_max_y)) for i in range(len(mode_clusters)-1)]
+        mode_high_distances = [((mode_clusters[i].get_max_y) - (mode_clusters[i-1].get_max_y)) for i in range(len(mode_clusters)-1)]
+        mode_high_distances_2nd = [((mode_clusters[i].get_max_y) - (mode_clusters[i-2].get_max_y)) for i in range(len(mode_clusters)-1)]
 
         mean = np.mean(mode_high_distances)
         std = np.std(mode_high_distances)
@@ -155,20 +141,60 @@ class LabeledPeakCollection(PeakCollection):
         fundamental_indices = [i for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] > cut_off]
         overlap_indices = [i-1 for i in range(len(mode_high_distances)) if mode_high_distances[i] > cut_off and mode_high_distances_2nd[i] < cut_off]
 
+        def closest_to(test: PeakCluster, target: PeakCluster, reference: PeakCluster) -> bool:
+            # return abs(test.get_max_y - target.get_max_y) < abs(test.get_max_y - reference.get_max_y)
+            # x_target_dist = abs(test.get_avg_x - target.get_avg_x)
+            # x_refere_dist = abs(test.get_avg_x - reference.get_avg_x)
+            # y_target_dist = abs(np.log10(test.get_max_y) - np.log10(target.get_max_y))
+            y_refere_dist = abs(np.log10(test.get_max_y) - np.log10(reference.get_max_y))
+            return test.get_max_y <= target.get_max_y and y_refere_dist > .5
+
         ordered_clusters = []  # first index corresponds to long_mode, second index to trans_mode
+        back_log_cluster = []
         # Order based on average y
         for i, cluster in enumerate(mode_clusters):
             if i in fundamental_indices:  # and (len(ordered_clusters) != 0 or abs(cluster.get_avg_x - ordered_clusters[-1][0].get_avg_x) > SAMPLE_WAVELENGTH * .4):  # Identify fundamental peaks
                 ordered_clusters.append([cluster])
             elif len(ordered_clusters) == 0:
                 continue  # Skip junk peaks before first fundamental mode
-            elif i in overlap_indices:  # Identify overlap transverse modes
-                if len(ordered_clusters) >= 2:
+            elif len(ordered_clusters) < 2:  # No previous sample FSR
+                if len(back_log_cluster) == 0:  # Only check overlap_indices if no backlog has been created
+                    if i in overlap_indices:
+                        back_log_cluster.append(cluster)
+                    else:
+                        ordered_clusters[-1].append(cluster)
+                else:  # Always reference closeness once backlog has been created
+                    if i in overlap_indices:  # closest_to(test=cluster, target=back_log_cluster[-1], reference=ordered_clusters[-1][-1]):
+                        back_log_cluster.append(cluster)
+                    else:
+                        ordered_clusters[-1].append(cluster)
+            else:
+                if i in overlap_indices:  # closest_to(test=cluster, target=ordered_clusters[-2][-1], reference=ordered_clusters[-1][-1]):
                     ordered_clusters[-2].append(cluster)
                 else:
-                    continue
-            else:
-                ordered_clusters[-1].append(cluster)
+                    ordered_clusters[-1].append(cluster)
+
+        # for i, cluster in enumerate(mode_clusters):
+        #     if i in fundamental_indices:  # and (len(ordered_clusters) != 0 or abs(cluster.get_avg_x - ordered_clusters[-1][0].get_avg_x) > SAMPLE_WAVELENGTH * .4):  # Identify fundamental peaks
+        #         ordered_clusters.append([cluster])
+        #     elif len(ordered_clusters) == 0:
+        #         continue  # Skip junk peaks before first fundamental mode
+        #     # elif i in overlap_indices:  # Identify overlap transverse modes
+        #     #     if len(ordered_clusters) >= 2:
+        #     #         ordered_clusters[-2].append(cluster)
+        #     #     else:
+        #     #         continue
+        #     elif len(ordered_clusters) < 2:
+        #         if len(back_log_cluster) >= 1:
+        #             if cluster.get_max_y <= back_log_cluster[-1].get_max_y:
+        #                 back_log_cluster.append(cluster)
+        #         else:
+        #             if i in overlap_indices:
+        #                 back_log_cluster.append(cluster)
+        #     elif len(ordered_clusters) >= 2 and cluster.get_max_y <= ordered_clusters[-2][-1].get_max_y:  # Identify overlap transverse modes
+        #         ordered_clusters[-2].append(cluster)
+        #     else:
+        #         ordered_clusters[-1].append(cluster)
         # Iterate and label
         result = []
         for long_mode_id, cluster_array in enumerate(ordered_clusters):
