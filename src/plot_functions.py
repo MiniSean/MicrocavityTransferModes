@@ -194,6 +194,7 @@ plt.rcParams.update({'font.size': font_size})
 
 
 def plot_allan_variance(xs: np.ndarray, ys: np.ndarray) -> plt.axes:
+    from mpl_toolkits.axes_grid.inset_locator import (inset_axes, InsetPosition, mark_inset)
     _, _ax = plt.subplots()
     _ax.plot(xs, ys, '.')
     _ax.set_ylabel(f'Variance' + r' $\langle [x(t + \delta t) - x(t)]^2 \rangle$ $[nm^2]$', fontsize=font_size)
@@ -202,6 +203,26 @@ def plot_allan_variance(xs: np.ndarray, ys: np.ndarray) -> plt.axes:
     _ax.set_yscale('log')
     # _ax.set_xscale('log')
     _ax.grid(True)
+
+    # Inset
+    _ax2 = plt.axes([0, 0, 1, 1])
+    # Manually set the position and relative size of the inset axes within ax1
+    ip = InsetPosition(_ax, [0.6, 0.1, 0.3, 0.3])
+    _ax2.set_axes_locator(ip)
+    # Mark the region corresponding to the inset axes on ax1 and draw lines
+    # in grey linking the two axes.
+    mark_inset(_ax, _ax2, loc1=2, loc2=4, fc="none", ec='0.5')
+    xs2 = []
+    ys2 = []
+    for i, x in enumerate(xs):
+        if x < 0.007:
+            xs2.append(xs[i])
+            ys2.append(ys[i])
+    _ax2.plot(xs2, ys2, '.')
+    _ax2.set_yscale('log')
+    _ax2.set_xscale('log')
+    _ax2.set_ylim(_ax.get_ylim())
+    _ax2.grid(True)
     return _ax
 
 

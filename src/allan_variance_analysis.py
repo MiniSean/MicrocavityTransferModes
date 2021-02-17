@@ -2,7 +2,7 @@ import numpy as np
 from typing import Union, Iterable, Dict, Any, Tuple, List
 from src.import_data import import_npy
 from src.peak_relation import LabeledPeakCollection, find_nearest_index
-LM_ARRAY = [2, 3, 4]
+LM_ARRAY = [4, 5, 6]
 TM_ARRAY = [0, 1, 2]
 
 
@@ -21,32 +21,32 @@ def extract_mode_separation(collection: LabeledPeakCollection, pass_dict: Dict[T
     for i, cluster_t in enumerate(lim_cluster_array):
         t_l = cluster_t.get_longitudinal_mode_id
         t_t = cluster_t.get_transverse_mode_id
-        # for p, peak_t in enumerate(cluster_t):
+        for p, peak_t in enumerate(cluster_t):
 
-        for j, cluster_dt in enumerate(lim_cluster_array):  # Only compare to upper left matrix triangle (excluding diagonal)
-            if j < i:
-                continue
-            dt_l = cluster_dt.get_longitudinal_mode_id
-            dt_t = cluster_dt.get_transverse_mode_id
-            # peak_range = cluster_dt[p+1:] if i == j else cluster_dt  # Only compare to upper left matrix triangle (excluding diagonal)
-            # for q, peak_dt in enumerate(cluster_dt):
-            #     if i == j and q <= p:
-            #         continue
-            #     if t_t not in TM_ARRAY or dt_t not in TM_ARRAY:
-            #         continue
+            for j, cluster_dt in enumerate(lim_cluster_array):  # Only compare to upper left matrix triangle (excluding diagonal)
+                if j < i:
+                    continue
+                dt_l = cluster_dt.get_longitudinal_mode_id
+                dt_t = cluster_dt.get_transverse_mode_id
+                # peak_range = cluster_dt[p+1:] if i == j else cluster_dt  # Only compare to upper left matrix triangle (excluding diagonal)
+                for q, peak_dt in enumerate(cluster_dt):
+                    if i == j and q <= p:
+                        continue
+                    elif i != j:
+                        p, q = 0, 0
+                        abs_difference = abs(cluster_dt.get_avg_x - cluster_t.get_avg_x)
+                    else:
+                        abs_difference = peak_dt.get_x - peak_t.get_x
+                    # abs_difference = peak_dt.get_x - peak_t.get_x
 
-            # Collect data
-            # abs_difference = peak_dt.get_x - peak_t.get_x
-            abs_difference = abs(cluster_dt.get_avg_x - cluster_t.get_avg_x)
-            p, q = 0, 0
-            # Memory save storage
-            key = ((t_l, t_t, p), (dt_l, dt_t, q))
-            # key = (dt_l - t_l, dt_t - t_t, q - p)
-            if key not in pass_dict:
-                pass_dict[key] = ([abs_difference], [abs_difference/scan_velocity])
-            else:
-                pass_dict[key][0].append(abs_difference)
-                pass_dict[key][1].append(abs_difference/scan_velocity)
+                    # Memory save storage
+                    key = ((t_l, t_t, p), (dt_l, dt_t, q))
+                    # key = (dt_l - t_l, dt_t - t_t, q - p)
+                    if key not in pass_dict:
+                        pass_dict[key] = ([abs_difference], [abs_difference/scan_velocity])
+                    else:
+                        pass_dict[key][0].append(abs_difference)
+                        pass_dict[key][1].append(abs_difference/scan_velocity)
     return pass_dict
 
 
@@ -109,7 +109,7 @@ def get_time_interval_variance(ref_array: Iterable[Tuple[List[float], List[float
 def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], scan_velocity: float) -> Tuple[np.ndarray, np.ndarray]:
     """Calculates Allan variance of transmission spectrum"""
     if scan_velocity == 0:
-        raise ValueError('Scan velocity needs to be a finite positive number')
+        raise ValueError('Scan velocity needs to be a finite positive non-zero number')
     reference_dict = {}
 
     # Collect data
@@ -138,8 +138,8 @@ def get_allan_variance(collection_iterator: Iterable[LabeledPeakCollection], sca
             continue
         y_var = np.var(abs_diff_array)
         x_var = np.mean(delta_time_array)
-        if y_var > 200:  # Outlier
-            continue
+        # if y_var > 200:  # Outlier
+        #     continue
 
         y_array.append(y_var)
         x_array.append(x_var)
