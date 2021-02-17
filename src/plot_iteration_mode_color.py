@@ -60,7 +60,6 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
     label_font_size = 18
     decimal_rounding = 4
     unit = 'nm'  # r'$\Delta \tilde{L}$'
-    rand_offset = 277.67
 
     # Filter consistent measurement peaks
     def filter_collection(iterator: Iterable[LabeledPeakCollection]) -> Iterable[LabeledPeakCollection]:
@@ -152,7 +151,7 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
             #     continue
             avg_pos_value = np.mean(pos_array)  # Sum / Count [nm]
             std_pos_value = np.std(pos_array)
-            mean = round((avg_pos_value), decimal_rounding) - rand_offset  # / (SAMPLE_WAVELENGTH / 2), 3)
+            mean = round((avg_pos_value), decimal_rounding)  # / (SAMPLE_WAVELENGTH / 2), 3)
             std = round((std_pos_value), decimal_rounding)  # / (SAMPLE_WAVELENGTH / 2), 3)
             avg_pos_data = np.mean([peak_index - pre_skip[i] - total_data_slice_array[i][0] for i, peak_index in enumerate(peak_dict[key][1])])
             ax.axvline(x=avg_pos_data, color='r', ls='--', label=f'({i}): {mean}'+r'$\pm$'+f'{std} [{unit}]')
@@ -193,7 +192,7 @@ def plot_pinned_focus_side(collection_iterator: Iterable[LabeledPeakCollection],
         data_values = []
         for i, _data_class in enumerate(data_class_array):
             data_values.append(_data_class.x_boundless_data[int(total_data_slice_array[i][0] + index)])
-        xticks.append(round(np.mean(data_values) - rand_offset, decimal_rounding))
+        xticks.append(round(np.mean(data_values), decimal_rounding))
         std_ticks.append(np.std(data_values))
 
     plt.xticks(locs[0:-1], xticks)
