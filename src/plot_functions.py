@@ -61,10 +61,12 @@ def plot_peak_collection(axis: plt.axes, data: Union[List[PeakData], PeakCollect
 
 def plot_cluster_collection(axis: plt.axes, data: Union[List[LabeledPeakCluster], LabeledPeakCollection]) -> plt.axes:
     for cluster in (data if isinstance(data, list) else data.get_clusters):
+        # if cluster.get_longitudinal_mode_id > 10:
+        #     continue
         if cluster.get_transverse_mode_id == 0:
             plt.gca().set_prop_cycle(None)
         axis = plot_peak_collection(axis=axis, data=cluster, label=f'n+m={cluster.get_transverse_mode_id}')
-        axis.text(x=cluster.get_avg_x, y=cluster.get_max_y, s=f'({cluster.get_longitudinal_mode_id}, {cluster.get_transverse_mode_id})', fontsize=8, horizontalalignment='center', verticalalignment='bottom')
+        axis.text(x=cluster.get_avg_x, y=cluster.get_max_y, s=f'({cluster.get_longitudinal_mode_id}, {cluster.get_transverse_mode_id})', fontsize=18, horizontalalignment='center', verticalalignment='bottom')
     return axis
 
 
@@ -90,9 +92,9 @@ def plot_peak_identification(collection: PeakCollection, meas_class: SyncMeasDat
     # Store plot figure and axis
     _, _ax = plt.subplots()
     _ax = plot_class(axis=_ax, measurement_class=meas_class)
-    for i, peak_data in enumerate(collection):
-        if peak_data.relevant:
-            _ax.plot(peak_data.get_x, peak_data.get_y, 'x', color='r', alpha=1)
+    # for i, peak_data in enumerate(collection):
+    #     if peak_data.relevant:
+    #         _ax.plot(peak_data.get_x, peak_data.get_y, 'x', color='r', alpha=1)
     return _ax
 
 
@@ -109,6 +111,25 @@ def plot_peak_relation(collection: LabeledPeakCollection, meas_class: SyncMeasDa
     except ValueError:
         pass
     _ax = plot_cluster_collection(axis=_ax, data=collection)
+    # temp
+    from src.generate_luk_predictions import get_mode_groups, get_predicted_cavity_length_function
+    from src.peak_relation import find_nearest_index
+    radius = 69477  # nm
+    data_class = collection._get_data_class
+    for cluster in collection.get_clusters:
+        try:
+            q_cluster = collection.q_dict[cluster.get_longitudinal_mode_id]
+            if q_cluster is None or cluster.get_longitudinal_mode_id - 1 in collection.q_dict:
+                continue
+        except KeyError:
+            continue
+        # # Draw predicted modes
+        # length_map = get_predicted_cavity_length_function(cav_length=q_cluster.get_avg_x, cav_radius=radius)
+        #
+        # for p, l in get_mode_groups(trans_mode=cluster.get_transverse_mode_id):
+        #     for peak_loc in length_map(cluster.get_longitudinal_mode_id, (p, l)):  # Loc in nm
+        #         # x_index = find_nearest_index(array=data_class.x_boundless_data, value=peak_loc)
+        #         _ax.axvline(x=peak_loc, color='darkorange', alpha=1)
     return _ax
 
 
@@ -185,17 +206,12 @@ def plot_radius_estimate(collection: LabeledPeakCollection, radius_mean: float, 
     # Produce fit results
     print(f'Cavity radius: R = {round(radius_mean, 1)} ' + r'+/-' + f' {round(radius_std, 1)} [nm]')
     print(f'Cavity offset length: {offset} [nm]')
-    _ax.set_title(f'Fitted cavity radius: R={round(radius_mean, 1)} ' + r'$\pm$' + f' {round(radius_std, 1)} [nm]')
+    _ax.set_title(f'Fitted cavity radius: R={round(radius_mean / 1000, 1)} ' + r'$\pm$' + f' {round(radius_std / 1000, 1)} '+r'[$\mu m$]')
     _ax.set_ylabel(f'Transverse mode splitting' + r' [$\Delta L / (\lambda / 2)$]')
-    _ax.set_xlabel(f'Mirror position - {round(offset, 1)} (Offset)' + r' [nm]')
+    _ax.set_xlabel(f'Mirror position' + r' [nm]')  #  - {round(offset, 1)} (Offset)
     _ax.grid(True)
     _ax.legend()
     return _ax
-
-
-# Define font
-font_size = 22
-plt.rcParams.update({'font.size': font_size})
 
 
 def plot_allan_variance(xs: np.ndarray, ys: np.ndarray) -> plt.axes:

@@ -12,7 +12,7 @@
 #
 from itertools import chain
 from src.import_data import FileToMeasData, DATA_DIR, import_npy
-from typing import Union, Iterable
+from typing import Union, Iterable, Callable
 from src.plot_functions import plot_peak_identification, plot_peak_relation, plot_peak_normalization_spectrum, plot_peak_normalization_overlap, plot_radius_estimate, plot_allan_variance, plot_mode_classification, plot_mode_distances
 from src.plot_iteration_mode_color import plot_pinned_focus_top, plot_pinned_focus_side, plot_pinned_track_top
 from src.cavity_radius_analysis import get_radius_estimate
@@ -23,7 +23,7 @@ from src.peak_normalization import NormalizedPeakCollection
 from src.structural_analysis import MeasurementAnalysis
 from src.plot_mode_splitting import plot_mode_splitting, SplittingFocus, ModeID
 from src.allan_variance_analysis import get_allan_variance
-Q_OFFSET = 7
+Q_OFFSET = 8
 
 
 def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, None] = DATA_DIR):
@@ -38,11 +38,11 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
 
     # Peak Identification
     peak_collection = identify_peaks(meas_data=measurement_container)
-    # plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
+    peak_ax = plot_peak_identification(collection=peak_collection, meas_class=measurement_container)  # Plot
 
     # Peak clustering and mode labeling
     labeled_collection = LabeledPeakCollection(transmission_peak_collection=peak_collection, q_offset=Q_OFFSET)
-    plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
+    rela_ax = plot_peak_relation(collection=labeled_collection, meas_class=measurement_container)  # Plot
     #
     # # Normalized based on free-spectral-ranges (FSR)
     # normalized_collection = NormalizedPeakCollection(transmission_peak_collection=peak_collection)
@@ -56,12 +56,12 @@ def single_source_analysis(meas_file: str, samp_file: str, filepath: Union[str, 
     # # Analysis object
     # analysis_obj = MeasurementAnalysis(meas_file=file_meas, samp_file=file_samp, collection=normalized_collection)
     # print(analysis_obj)
+    #
+    # # Plot mode distance scaling
+    # plot_mode_distances(collection=labeled_collection)  # Plot
 
-    # Plot mode distance scaling
-    plot_mode_distances(collection=labeled_collection)  # Plot
 
-
-def get_file_fetch_func(file_base_name: str, filepath: Union[str, None] = DATA_DIR):
+def get_file_fetch_func(file_base_name: str, filepath: Union[str, None] = DATA_DIR) -> Callable[[int], Union[str, FileNotFoundError]]:
     """Returns a function that accepts an interation index and tries to fetch the corresponding file."""
 
     def file_fetch_function(iteration: int) -> Union[str, FileNotFoundError]:
@@ -83,7 +83,9 @@ def get_labeled_collection(meas_file_base: str, iter_count: Iterable[int], samp_
             meas_file = fetch_func(iteration=i)
             measurement_container = FileToMeasData(meas_file=meas_file, samp_file=samp_file, filepath=filepath)
             measurement_container = get_converted_measurement_data(meas_class=measurement_container, q_offset=Q_OFFSET)
-            yield LabeledPeakCollection(transmission_peak_collection=identify_peaks(meas_data=measurement_container), q_offset=Q_OFFSET)
+            labeled_collection = LabeledPeakCollection(transmission_peak_collection=identify_peaks(meas_data=measurement_container), q_offset=Q_OFFSET)
+            # normalized_collection = NormalizedPeakCollection(transmission_peak_collection=identify_peaks(meas_data=measurement_container), q_offset=Q_OFFSET)
+            yield labeled_collection
         except FileNotFoundError:
             continue
 
@@ -95,28 +97,31 @@ def multi_source_analysis(meas_file_base: str, iter_count: Iterable[int], samp_f
 
     # Top-view measurement transmission comparison (with pin and focus selection)
     # pin/focus = ( longitudinal mode ID, transverse mode ID )
-    plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(9, 0), focus=[(8, 8)])  # Plot
+    # plot_pinned_focus_top(collection_iterator=iterable_collections, pin=(8, 0), focus=[(8, 2)])  # Plot
 
     # Side-view measurement transmission focus
-    plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(8, 8))
+    # plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(4, 0))
+    # plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(9, 3))  # 3
+    # plot_pinned_focus_side(collection_iterator=iterable_collections, pin=(9, 6))  # 4
 
     # Mode splitting
-    plot_mode_splitting(collection_iterator=iterable_collections, focus=global_focus)  # Plot
-
-    # Allan variance
-    scan_speed = 3500
-    _x, allan_variance_y = get_allan_variance(collection_iterator=iterable_collections, scan_velocity=scan_speed)
-    plot_allan_variance(xs=_x, ys=allan_variance_y)  # Plot
+    # plot_mode_splitting(collection_iterator=iterable_collections, focus=global_focus)  # Plot
+    #
+    # # Allan variance
+    # scan_speed = 3500
+    # _x, allan_variance_y = get_allan_variance(collection_iterator=iterable_collections, scan_velocity=scan_speed)
+    # plot_allan_variance(xs=_x, ys=allan_variance_y)  # Plot
 
 
 if __name__ == '__main__':
+    import numpy as np
     import matplotlib.pyplot as plt
 
     # Data file reference (Import data)
-    file_path = 'data/Trans/20210120'  # Directory path from project root (Optional)
-    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration2'
+    file_path = 'data/Trans/20210104'  # Directory path from project root (Optional)
+    file_meas = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration0'
     file_samp = 'samples_1s_10V_rate1300000.0'
-    # file_path = 'data/Trans/zm98'
+    # file_path = 'data/Trans/20201213_CorneMeasurementData/cavity 1h/zm100'
 
     # Single measurement analysis tools
     single_source_analysis(meas_file=file_meas, samp_file=file_samp, filepath=file_path)
@@ -124,40 +129,12 @@ if __name__ == '__main__':
     file_meas_base = 'transrefl_hene_1s_10V_PMT5_rate1300000.0itteration{}'
 
     # Multi measurement analysis tools
-    global_focus = SplittingFocus(data=[(ModeID(9, 0), ModeID(8, 8, 0)), (ModeID(10, 0), ModeID(9, 8, 0)), (ModeID(11, 0), ModeID(10, 8, 0))])
-    # multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(5), samp_file=file_samp, filepath=file_path)
+    # global_focus = SplittingFocus(data=[(ModeID(9, 0), ModeID(8, 8, 0)), (ModeID(10, 0), ModeID(9, 8, 0)), (ModeID(11, 0), ModeID(10, 8, 0))])
+    multi_source_analysis(meas_file_base=file_meas_base, iter_count=range(50), samp_file=file_samp, filepath=file_path)
 
-    # # First
-    # height_cutoff = 0.55
-    # seperation_cutoff = .3
-    # prominence_cutoff = 1.2
-    # peak_cutoff = 250000
-    # q_offset = 3
-    # measurement_container_0 = FileToMeasData(meas_file=file_meas, samp_file=file_samp, filepath='data/Trans/zm98')
-    # peak_collection_0 = identify_peaks(meas_data=measurement_container_0, custom_peak_prominence=prominence_cutoff)
-    # peak_collection_0 = PeakCollection([peak for peak in peak_collection_0 if peak.get_relative_index > peak_cutoff])
-    # collection_0 = LabeledPeakCollection(transmission_peak_collection=peak_collection_0, q_offset=q_offset, custom_height_cutoff=height_cutoff, custom_cluster_seperation=seperation_cutoff)
-    # measurement_container_0 = get_converted_measurement_data(meas_class=collection_0)
-    # peak_collection_0 = identify_peaks(meas_data=measurement_container_0, custom_peak_prominence=prominence_cutoff)
-    # peak_collection_0 = PeakCollection([peak for peak in peak_collection_0 if peak.get_relative_index > peak_cutoff])
-    # collection_0 = LabeledPeakCollection(transmission_peak_collection=peak_collection_0, q_offset=q_offset, custom_height_cutoff=height_cutoff, custom_cluster_seperation=seperation_cutoff)
-    #
-    # # Second
-    # height_cutoff = 0.55
-    # peak_cutoff = 100000
-    # q_offset = 8
-    # measurement_container_1 = FileToMeasData(meas_file=file_meas, samp_file=file_samp, filepath=file_path)
-    # peak_collection_1 = identify_peaks(meas_data=measurement_container_1)
-    # peak_collection_1 = PeakCollection([peak for peak in peak_collection_1 if peak.get_relative_index > peak_cutoff])
-    # collection_1 = LabeledPeakCollection(transmission_peak_collection=peak_collection_1, q_offset=q_offset, custom_height_cutoff=height_cutoff)
-    # measurement_container_1 = get_converted_measurement_data(meas_class=collection_1)
-    # peak_collection_1 = identify_peaks(meas_data=measurement_container_1)
-    # peak_collection_1 = PeakCollection([peak for peak in peak_collection_1 if peak.get_relative_index > peak_cutoff])
-    # collection_1 = LabeledPeakCollection(transmission_peak_collection=peak_collection_1, q_offset=q_offset, custom_height_cutoff=height_cutoff)
-    # zm_collection = [collection_0, collection_1]
-    #
-    # # plot_peak_relation(collection=collection_0, meas_class=measurement_container_0)  # Plot
-    # plot_peak_relation(collection=collection_1, meas_class=measurement_container_1)  # Plot
-    # plot_pinned_track_top(collection_iterator=zm_collection, trans_mode_track=8)  # Plot
+
+    def get_delta_r(r: float, L: float, delta_L_tilde: float) -> float:
+        ratio = np.sqrt((r - L) / L)
+        return 2 * np.pi * delta_L_tilde * ratio
 
     plt.show()
