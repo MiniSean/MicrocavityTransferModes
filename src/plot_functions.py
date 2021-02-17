@@ -11,6 +11,11 @@ from src.cavity_radius_analysis import get_gouy_func
 rcParams['agg.path.chunksize'] = 1000
 
 
+# Define font
+font_size = 28
+plt.rcParams.update({'font.size': font_size})
+
+
 def plot_class(axis: plt.axes, measurement_class: SyncMeasData, **kwargs):
     # Plot array
     axis.plot(measurement_class.x_data, measurement_class.y_data, **kwargs)

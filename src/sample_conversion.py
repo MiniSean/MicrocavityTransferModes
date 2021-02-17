@@ -3,6 +3,7 @@ from scipy.optimize import curve_fit
 import logging
 from typing import Callable, Any, Iterator, List, Union
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 from src.peak_relation import LabeledPeakCluster, SAMPLE_WAVELENGTH
 FONT_SIZE = 20
 
@@ -154,17 +155,18 @@ def fit_piezo_response(cluster_collection: List[LabeledPeakCluster], sample_wave
     return voltage_map
 
 
-# Define font
-font_size = 18
-plt.rcParams.update({'font.size': font_size})
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
-ax3 = ax2.twinx()
-ax1.text(1.1, 1., '(c)', horizontalalignment='center', verticalalignment='top', transform=ax1.transAxes, fontsize=FONT_SIZE)
-ax2.text(1.1, 1., '(d)', horizontalalignment='center', verticalalignment='top', transform=ax2.transAxes, fontsize=FONT_SIZE)
+# # Define font
+# font_size = 18
+# plt.rcParams.update({'font.size': font_size})
+# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+# ax3 = ax2.twinx()
+# ax1.text(1.1, 1., '(c)', horizontalalignment='center', verticalalignment='top', transform=ax1.transAxes, fontsize=FONT_SIZE)
+# ax2.text(1.1, 1., '(d)', horizontalalignment='center', verticalalignment='top', transform=ax2.transAxes, fontsize=FONT_SIZE)
 
 
 def plot_response_mapping(cluster_collection: List[LabeledPeakCluster], q_offset: int, fit_function: Callable[[np.ndarray], np.ndarray], length_map: Callable[[np.ndarray], np.ndarray], cavity_map: Callable[[np.ndarray], np.ndarray], lin_coef: float, len_max: float):
-    # fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), constrained_layout=True)
+    ax3 = ax2.twinx()
     # Mode samples
     x_array = np.asarray([mode.get_avg_x for mode in cluster_collection])
     x_array_smooth = np.linspace(0, 10, 100)
