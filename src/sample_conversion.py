@@ -66,9 +66,9 @@ def voltage_to_length(a: float, b: float, c: float, d: float, e: float, initial_
     :return: Total cavity length [nm]
     """
     def map_function(v: np.ndarray) -> np.ndarray:
-        return initial_length - (c * v + a * np.exp(- b * v) * np.sin(d * v - e))  # - e
+        return initial_length - (c * v + a * np.exp(- b * v) * np.sin(d * v))  # - e
         # return (initial_length - (c * v + b * v**2 + a * v**3)
-        # return initial_length - (v * c) * (1 - np.exp(-v * a))
+        # return initial_length - (v * c)# * (1 - np.exp(-v * a))
         # return initial_length - c * (1 - a * np.log10(v/.1))
     return map_function
 
